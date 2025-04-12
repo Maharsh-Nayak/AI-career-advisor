@@ -9,7 +9,6 @@ class Profile(models.Model):
     location = models.CharField(max_length=100, blank=True)
     skills = models.TextField(blank=True, help_text="Enter skills separated by commas")
     saved_jobs = models.JSONField(default=list, blank=True)
-    receive_news_updates = models.BooleanField(default=True, help_text="Receive news updates about technologies relevant to your skills")
     
     def __str__(self):
         return f"{self.user.username}'s profile"
@@ -43,36 +42,6 @@ class Profile(models.Model):
             return True
         return False
 
-class TechNewsSubscription(models.Model):
-    """Model to store user preferences for technology news updates"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tech_news_subscriptions')
-    technology = models.CharField(max_length=100)
-    created_at = models.DateTimeField(auto_now_add=True)
-    last_notified = models.DateTimeField(null=True, blank=True)
-    
-    class Meta:
-        unique_together = ['user', 'technology']
-        verbose_name = "Technology News Subscription"
-        verbose_name_plural = "Technology News Subscriptions"
-    
-    def __str__(self):
-        return f"{self.user.username} - {self.technology}"
-
-class NewsArticle(models.Model):
-    """Model to store fetched news articles"""
-    title = models.CharField(max_length=255)
-    url = models.URLField()
-    source = models.CharField(max_length=100)
-    published_date = models.DateTimeField()
-    technology = models.CharField(max_length=100)
-    summary = models.TextField()
-    
-    class Meta:
-        ordering = ['-published_date']
-    
-    def __str__(self):
-        return self.title
-
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
@@ -80,17 +49,4 @@ def create_user_profile(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
-    instance.profile.save()
-
-@receiver(post_save, sender=Profile)
-def create_tech_subscriptions(sender, instance, created, **kwargs):
-    """When a profile is updated with skills, create tech news subscriptions"""
-    if instance.skills:
-        skills = instance.get_skills_list()
-        for skill in skills:
-            # Only create subscriptions for technical skills
-            if len(skill) > 2:  # Skip very short skill names
-                TechNewsSubscription.objects.get_or_create(
-                    user=instance.user,
-                    technology=skill.lower()
-                ) 
+    instance.profile.save() 

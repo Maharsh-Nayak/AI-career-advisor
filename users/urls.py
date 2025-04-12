@@ -9,11 +9,9 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('profile/', views.profile_view, name='profile'),
-    path('profile/update/', views.profile_update_view, name='profile_edit'),
+    path('profile/update/', views.profile_update_view, name='profile_update'),
     path('profile/save-job/', views.save_job_view, name='save_job'),
     path('profile/remove-job/<str:job_id>/', views.remove_job_view, name='remove_job'),
-    path('tech-news/preferences/', views.tech_news_preferences, name='tech_news_preferences'),
-    path('tech-news/subscription/<int:subscription_id>/delete/', views.delete_subscription, name='delete_subscription'),
     
     # Password reset
     path('password-reset/', 

@@ -1,13 +1,12 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .forms import UserRegistrationForm, UserLoginForm, ProfileUpdateForm, UserUpdateForm
-from .models import Profile, TechNewsSubscription
+from .models import Profile
 from django.contrib.auth.models import User
 import json
 from django.http import JsonResponse
-from .email_service import TechNewsEmailService
 
 def register_view(request):
     if request.user.is_authenticated:
@@ -124,105 +123,4 @@ def remove_job_view(request, job_id):
             
         return redirect('users:profile')
     
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
-
-@login_required
-def tech_news_preferences(request):
-    """View for managing technology news subscriptions"""
-    user = request.user
-    profile = user.profile
-    
-    # Get user's current subscriptions
-    subscriptions = TechNewsSubscription.objects.filter(user=user).order_by('technology')
-    
-    if request.method == 'POST':
-        # Handle toggling email updates
-        if 'toggle_emails' in request.POST:
-            profile.receive_news_updates = not profile.receive_news_updates
-            profile.save()
-            
-            status = "enabled" if profile.receive_news_updates else "disabled"
-            messages.success(request, f"Technology news updates {status} successfully!")
-        
-        # Handle adding a new technology subscription
-        elif 'add_subscription' in request.POST:
-            technology = request.POST.get('technology', '').strip().lower()
-            
-            if technology:
-                if len(technology) < 3:
-                    messages.error(request, "Technology name must be at least 3 characters.")
-                else:
-                    # Check if subscription already exists
-                    if TechNewsSubscription.objects.filter(user=user, technology=technology).exists():
-                        messages.info(request, f"You're already subscribed to {technology} news.")
-                    else:
-                        TechNewsSubscription.objects.create(user=user, technology=technology)
-                        messages.success(request, f"Subscribed to {technology} news successfully!")
-        
-        # Handle removing a subscription
-        elif 'remove_subscription' in request.POST:
-            subscription_id = request.POST.get('subscription_id')
-            if subscription_id:
-                try:
-                    subscription = TechNewsSubscription.objects.get(id=subscription_id, user=user)
-                    tech_name = subscription.technology
-                    subscription.delete()
-                    messages.success(request, f"Unsubscribed from {tech_name} news.")
-                except TechNewsSubscription.DoesNotExist:
-                    messages.error(request, "Subscription not found.")
-        
-        # Handle sending a test email
-        elif 'send_test_email' in request.POST:
-            # Get technologies from subscriptions
-            techs = list(subscriptions.values_list('technology', flat=True))
-            
-            if techs:
-                from users.services import TechNewsService
-                
-                # Get a sample of news for each technology
-                all_articles = []
-                for tech in techs[:3]:  # Limit to 3 technologies for the test
-                    articles = TechNewsService.fetch_news_for_technology(tech, limit=2)
-                    saved_articles = TechNewsService.save_articles_to_db(articles)
-                    all_articles.extend(saved_articles)
-                
-                if all_articles:
-                    # Send the test email
-                    sent = TechNewsEmailService.send_tech_news_email(user, all_articles)
-                    if sent:
-                        messages.success(request, "Test email sent successfully! Check your inbox.")
-                    else:
-                        messages.error(request, "Failed to send test email. Please try again later.")
-                else:
-                    messages.warning(request, "No news articles found for your technologies. Please try again later.")
-            else:
-                messages.warning(request, "You need to subscribe to at least one technology to receive test emails.")
-        
-        return redirect('tech_news_preferences')
-    
-    # Get all skills from user profile
-    skills = profile.get_skills_list()
-    
-    # Create a list of technologies user might be interested in but isn't subscribed to
-    subscribed_techs = [sub.technology for sub in subscriptions]
-    suggested_techs = [skill for skill in skills if skill.lower() not in subscribed_techs]
-    
-    context = {
-        'profile': profile,
-        'subscriptions': subscriptions,
-        'suggested_techs': suggested_techs[:5],  # Limit to 5 suggestions
-    }
-    
-    return render(request, 'users/tech_news_preferences.html', context)
-
-@login_required
-def delete_subscription(request, subscription_id):
-    """View for deleting a technology news subscription"""
-    subscription = get_object_or_404(TechNewsSubscription, id=subscription_id, user=request.user)
-    
-    if request.method == 'POST':
-        tech_name = subscription.technology
-        subscription.delete()
-        messages.success(request, f"Unsubscribed from {tech_name} news.")
-    
-    return redirect('tech_news_preferences') 
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}) 

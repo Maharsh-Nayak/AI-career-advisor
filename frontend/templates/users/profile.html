@@ -111,35 +111,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- User profile actions -->
-        <div class="list-group mb-4">
-            <a href="{% url 'users:profile_edit' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                <div>
-                    <i class="fas fa-user-edit me-2 text-primary"></i> Edit Profile
-                </div>
-                <i class="fas fa-chevron-right text-muted"></i>
-            </a>
-            <a href="{% url 'users:saved_jobs' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                <div>
-                    <i class="fas fa-bookmark me-2 text-primary"></i> Saved Jobs
-                    {% if user.profile.get_saved_jobs %}
-                        <span class="badge bg-primary rounded-pill">{{ user.profile.get_saved_jobs|length }}</span>
-                    {% endif %}
-                </div>
-                <i class="fas fa-chevron-right text-muted"></i>
-            </a>
-            <a href="{% url 'users:tech_news_preferences' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                <div>
-                    <i class="fas fa-newspaper me-2 text-primary"></i> Tech News Preferences
-                    {% if user.tech_news_subscriptions.exists %}
-                        <span class="badge bg-primary rounded-pill">{{ user.tech_news_subscriptions.count }}</span>
-                    {% endif %}
-                </div>
-                <i class="fas fa-chevron-right text-muted"></i>
-            </a>
-            <!-- More actions as needed -->
-        </div>
     </div>
 </div>
 {% endblock %}
