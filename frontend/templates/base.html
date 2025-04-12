@@ -154,7 +154,11 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+            {% if user.is_authenticated %}
+                <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+            {% else %}
+                <a class="navbar-brand d-flex align-items-center" href="{% url 'landing' %}">
+            {% endif %}
                 <img src="{% static 'images/logo1.jpg' %}" alt="Career Compass Logo" class="logo-image">
                 <div class="logo-text">
                     <span class="top">CAREER</span>
@@ -167,7 +171,11 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/">Home</a>
+                        {% if user.is_authenticated %}
+                            <a class="nav-link" href="{% url 'home' %}">Home</a>
+                        {% else %}
+                            <a class="nav-link" href="{% url 'landing' %}">Home</a>
+                        {% endif %}
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'jobs:skills_analysis' %}">Skills Analysis</a>

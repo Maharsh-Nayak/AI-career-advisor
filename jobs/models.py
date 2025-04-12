@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 
 class JobMarket(models.Model):
     title = models.CharField(max_length=100)
@@ -20,7 +20,7 @@ class JobListing(models.Model):
         return f"{self.title} at {self.company_name}"
 
 class NetworkingGoal(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     goal_text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     

@@ -1,15 +1,14 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from django.contrib.auth.models import User
-from .models import Profile
+from .models import Profile, CustomUser
 
 class UserRegistrationForm(UserCreationForm):
-    email = forms.EmailField(required=True)
-    first_name = forms.CharField(required=True)
-    last_name = forms.CharField(required=True)
+    email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    first_name = forms.CharField(required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    last_name = forms.CharField(required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
     
     class Meta:
-        model = User
+        model = CustomUser
         fields = ['username', 'email', 'first_name', 'last_name', 'password1', 'password2']
     
     def __init__(self, *args, **kwargs):
@@ -17,6 +16,18 @@ class UserRegistrationForm(UserCreationForm):
         # Add Bootstrap classes
         for field_name in self.fields:
             self.fields[field_name].widget.attrs.update({'class': 'form-control'})
+    
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if CustomUser.objects.filter(email=email).exists():
+            raise forms.ValidationError("This email address is already in use.")
+        return email
+    
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if CustomUser.objects.filter(username=username).exists():
+            raise forms.ValidationError("This username is already taken.")
+        return username
 
 class UserLoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
@@ -37,7 +48,7 @@ class ProfileUpdateForm(forms.ModelForm):
 
 class UserUpdateForm(forms.ModelForm):
     class Meta:
-        model = User
+        model = CustomUser
         fields = ['first_name', 'last_name', 'email']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),

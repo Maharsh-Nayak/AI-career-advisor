@@ -1,10 +1,18 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+import uuid
+
+class CustomUser(AbstractUser):
+    unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    
+    class Meta:
+        verbose_name = 'user'
+        verbose_name_plural = 'users'
 
 class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     bio = models.TextField(max_length=500, blank=True)
     location = models.CharField(max_length=100, blank=True)
     skills = models.TextField(blank=True, help_text="Enter skills separated by commas")
@@ -42,11 +50,12 @@ class Profile(models.Model):
             return True
         return False
 
-@receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        Profile.objects.create(user=instance)
-
-@receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    instance.profile.save() 
+@receiver(post_save, sender=CustomUser)
+def create_or_update_user_profile(sender, instance, created, **kwargs):
+    try:
+        if created:
+            Profile.objects.get_or_create(user=instance)
+        else:
+            Profile.objects.get_or_create(user=instance)
+    except Exception as e:
+        print(f"Error creating/updating profile: {str(e)}") 

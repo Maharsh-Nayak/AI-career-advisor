@@ -12,6 +12,7 @@ urlpatterns = [
     path('profile/update/', views.profile_update_view, name='profile_update'),
     path('profile/save-job/', views.save_job_view, name='save_job'),
     path('profile/remove-job/<str:job_id>/', views.remove_job_view, name='remove_job'),
+    path('verify-email/<uidb64>/<token>/', views.verify_email, name='verify_email'),
     
     # Password reset
     path('password-reset/', 
