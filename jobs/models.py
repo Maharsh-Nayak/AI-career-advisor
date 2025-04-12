@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class JobMarket(models.Model):
     title = models.CharField(max_length=100)
@@ -16,4 +17,19 @@ class JobListing(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.title} at {self.company_name}" 
+        return f"{self.title} at {self.company_name}"
+
+class NetworkingGoal(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    goal_text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Store the analysis results
+    extracted_keywords = models.JSONField(default=dict, blank=True, null=True)
+    industries = models.JSONField(default=list, blank=True, null=True)
+    companies = models.JSONField(default=list, blank=True, null=True)
+    roles = models.JSONField(default=list, blank=True, null=True)
+    
+    def __str__(self):
+        username = self.user.username if self.user else "Anonymous"
+        return f"Networking Goal for {username} - {self.created_at.strftime('%Y-%m-%d')}" 

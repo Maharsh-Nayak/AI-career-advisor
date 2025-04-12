@@ -1,4 +1,5 @@
 from django import forms
+from .models import NetworkingGoal
 
 class ResumeUploadForm(forms.Form):
     resume = forms.FileField(
@@ -13,4 +14,18 @@ class ResumeUploadForm(forms.Form):
             file_ext = resume.name.split('.')[-1].lower()
             if file_ext not in ['pdf', 'docx']:
                 raise forms.ValidationError('File type not supported. Please upload a PDF or DOCX file.')
-        return resume 
+        return resume
+
+class NetworkingGoalForm(forms.ModelForm):
+    goal_text = forms.CharField(
+        label="What's your networking goal?",
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'E.g., "I want to connect with mentors in data science and product managers in gaming industry."'
+        })
+    )
+    
+    class Meta:
+        model = NetworkingGoal
+        fields = ['goal_text'] 

@@ -4,23 +4,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}CareerPath AI - Discover Your Perfect Career Path{% endblock %}</title>
+    <title>{% block title %}Career Compass - Navigate Your Professional Journey{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary-color: #6366f1;
             --bg-light: #f0f3ff;
+            --dark-blue: #0a192f;
         }
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background-color: var(--bg-light);
         }
+        .navbar {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            background-color: var(--primary-color) !important;
+        }
         .navbar-brand {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
             font-weight: 600;
-            color: var(--primary-color);
+            color: #fff;
+            padding: 0;
+        }
+        .logo-image {
+            height: 65px;
+            width: auto;
+            border-radius: 0;
+            object-fit: contain;
+            background-color: transparent;
+            mix-blend-mode: multiply;
+            padding: 2px;
+        }
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.1;
+        }
+        .logo-text .top {
+            font-size: 14px;
+            letter-spacing: 1px;
+            opacity: 0.9;
+        }
+        .logo-text .bottom {
+            font-size: 16px;
+            font-weight: 700;
         }
         .navbar-logo {
             color: var(--primary-color);
@@ -105,15 +136,30 @@
             padding: 2rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         }
+        .footer-logo {
+            height: 40px;
+            width: auto;
+            object-fit: contain;
+            background-color: transparent;
+            mix-blend-mode: multiply;
+            margin-right: 10px;
+        }
+        /* Add a class for the footer with the primary color */
+        .footer-primary {
+            background-color: var(--primary-color);
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-white py-3 shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <a class="navbar-brand" href="/">
-                <span class="navbar-logo">✦</span>
-                CareerPath AI
+            <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+                <img src="{% static 'images/logo1.jpg' %}" alt="Career Compass Logo" class="logo-image">
+                <div class="logo-text">
+                    <span class="top">CAREER</span>
+                    <span class="bottom">COMPASS</span>
+                </div>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -167,9 +213,27 @@
 
     {% block content %}{% endblock %}
 
-    <footer class="bg-dark text-white text-center py-4">
+    <footer class="footer-primary text-white text-center py-4">
         <div class="container">
-            <p class="mb-0">© 2025 CareerPath AI. All rights reserved.</p>
+            <div class="row">
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <div class="d-flex align-items-center justify-content-center justify-content-md-start">
+                        <img src="{% static 'images/logo1.jpg' %}" alt="Career Compass Logo" class="footer-logo">
+                        <span class="fw-bold">Career Compass</span>
+                    </div>
+                    <p class="small mt-2 mb-0">Guiding your professional journey</p>
+                </div>
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <p class="mb-0">© 2025 Career Compass. All rights reserved.</p>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex justify-content-center justify-content-md-end">
+                        <a href="#" class="text-white mx-2"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" class="text-white mx-2"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-white mx-2"><i class="fab fa-facebook"></i></a>
+                    </div>
+                </div>
+            </div>
         </div>
     </footer>
 

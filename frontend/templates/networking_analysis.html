@@ -1,91 +1,72 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}CareerPath AI - Networking Analysis{% endblock %}
+{% block title %}Career Compass - Networking Analysis{% endblock %}
 
 {% block content %}
-<div class="content-section">
+<div class="content-section py-5">
     <div class="container">
-        <h1 class="text-center mb-5">Networking Analysis</h1>
+        <h1 class="text-center mb-4">Networking Strategy</h1>
+        <p class="text-center text-muted mb-5">Discover the best connections to advance your career goals</p>
         
         <div class="row">
-            <div class="col-md-6">
-                <div class="page-card">
-                    <h5 class="mb-4 fw-bold">Career Networking Assistant</h5>
-                    <p class="text-muted mb-4">Enter your profile details and networking goals to get personalized recommendations on industries, companies, and roles to target in your networking efforts.</p>
-                    
-                    <form id="networkingForm" class="mt-4">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="current_role" class="form-label">Current Role/Field</label>
-                            <input type="text" class="form-control" id="current_role" name="current_role" required>
-                        </div>
+            <div class="col-12">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white py-3">
+                        <h5 class="mb-0">What's Your Networking Goal?</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <p class="text-muted mb-4">Tell us what you're looking to achieve with your networking efforts, and we'll generate targeted LinkedIn searches to help you find the right connections.</p>
                         
-                        <div class="mb-3">
-                            <label for="industry" class="form-label">Industry</label>
-                            <input type="text" class="form-control" id="industry" name="industry" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="skills" class="form-label">Key Skills (comma-separated)</label>
-                            <input type="text" class="form-control" id="skills" name="skills" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="experience" class="form-label">Years of Experience</label>
-                            <input type="number" class="form-control" id="experience" name="experience" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="location" class="form-label">Location</label>
-                            <input type="text" class="form-control" id="location" name="location" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="networking_goal" class="form-label">Your Networking Goal</label>
-                            <textarea class="form-control" id="networking_goal" name="networking_goal" rows="3" required></textarea>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary w-100">Analyze</button>
-                    </form>
+                        <form id="networkingForm" class="mt-4">
+                            {% csrf_token %}
+                            <div class="mb-4">
+                                <label for="networking_goal" class="form-label fw-bold">Your Networking Goal</label>
+                                <textarea class="form-control" id="networking_goal" name="networking_goal" rows="4" placeholder="Example: I want to connect with mentors in data science or product managers in the gaming industry to learn about career paths." required></textarea>
+                                <div class="form-text">Be specific about roles, industries, or skills you're interested in.</div>
+                            </div>
+                            
+                            <div class="mb-3 border-top pt-3">
+                                <p class="text-muted small mb-3"><i class="fas fa-info-circle me-1"></i> Optionally, you can provide additional context about your background:</p>
+                                
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="current_role" class="form-label small">Current Role</label>
+                                        <input type="text" class="form-control form-control-sm" id="current_role" name="current_role">
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="industry" class="form-label small">Industry</label>
+                                        <input type="text" class="form-control form-control-sm" id="industry" name="industry">
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <label for="skills" class="form-label small">Key Skills (comma-separated)</label>
+                                        <input type="text" class="form-control form-control-sm" id="skills" name="skills">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100">Generate Networking Strategy</button>
+                        </form>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="col-md-6">
+                
                 <div id="results" class="d-none">
-                    <div class="page-card mb-4">
-                        <div class="bg-primary text-white p-3 rounded-top">
-                            <h5 class="mb-0">Relevant Industries</h5>
-                        </div>
-                        <div class="p-3">
-                            <div id="relevantIndustries"></div>
-                        </div>
+                    <!-- Add alert for networking summary -->
+                    <div class="alert alert-info mb-4">
+                        <h5 class="alert-heading"><i class="fas fa-lightbulb me-2"></i>Networking Strategy</h5>
+                        <p class="mb-0" id="strategySummary">Based on your goal, here are personalized LinkedIn search recommendations to help you find relevant connections.</p>
                     </div>
                     
-                    <div class="page-card mb-4">
-                        <div class="bg-success text-white p-3 rounded-top">
-                            <h5 class="mb-0">Example Companies</h5>
+                    <!-- LinkedIn Search URLs -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-warning text-dark py-3">
+                            <h5 class="mb-0"><i class="fab fa-linkedin me-2"></i>Find Potential Mentors</h5>
                         </div>
-                        <div class="p-3">
-                            <div id="exampleCompanies"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="page-card mb-4">
-                        <div class="bg-info text-white p-3 rounded-top">
-                            <h5 class="mb-0">Relevant Role Types</h5>
-                        </div>
-                        <div class="p-3">
-                            <div id="relevantRoles"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="page-card mb-4">
-                        <div class="bg-warning text-dark p-3 rounded-top">
-                            <h5 class="mb-0">Skill-Based Mentors</h5>
-                        </div>
-                        <div class="p-3">
-                            <div id="skillMentors"></div>
+                        <div class="card-body p-3">
+                            <p class="text-muted mb-3">Click on these links to find potential mentors and connections on LinkedIn:</p>
+                            <div id="linkedinUrls" class="d-flex flex-wrap gap-2"></div>
                         </div>
                     </div>
                 </div>
@@ -94,10 +75,17 @@
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
-                    <p class="mt-3 text-muted">Analyzing your networking profile...</p>
+                    <p class="mt-3 text-muted">Analyzing your networking goals...</p>
                 </div>
                 
                 <div id="error" class="d-none alert alert-danger mt-3"></div>
+                
+                <!-- Initial state -->
+                <div id="initialState" class="text-center py-5 my-5">
+                    <img src="{% static 'images/networking.png' %}" alt="Networking" class="img-fluid mb-4" style="max-height: 200px; opacity: 0.7;">
+                    <h3 class="text-muted">Enter your networking goal</h3>
+                    <p class="text-muted">We'll analyze it and provide targeted recommendations</p>
+                </div>
             </div>
         </div>
     </div>
@@ -110,19 +98,21 @@
         const results = document.getElementById('results');
         const loading = document.getElementById('loading');
         const errorDiv = document.getElementById('error');
+        const initialState = document.getElementById('initialState');
         
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // Hide results and error, show loading
+            // Hide results, error, and initial state, show loading
             results.classList.add('d-none');
             errorDiv.classList.add('d-none');
+            initialState.classList.add('d-none');
             loading.classList.remove('d-none');
             
             const formData = new FormData(form);
             
             try {
-                // Use the frontend route that works (not the api route)
+                // Use the frontend route that works
                 const response = await fetch('/networking-analysis/', {
                     method: 'POST',
                     body: formData,
@@ -136,18 +126,10 @@
                 const data = await response.json();
                 console.log("API Response:", data); // Debug log
                 
-                if (data.status === 'success' || data.mentors) {
+                if (data.status === 'success') {
                     // Display the results
                     if (data.analysis) {
                         displayResults(data.analysis);
-                    }
-                    
-                    // Always try to display mentors if they exist
-                    if (data.mentors && data.mentors.length > 0) {
-                        displayMentors(data.mentors);
-                        document.querySelector('.page-card.mb-4:last-child').classList.remove('d-none');
-                    } else {
-                        document.querySelector('.page-card.mb-4:last-child').classList.add('d-none');
                     }
                     
                     results.classList.remove('d-none');
@@ -166,108 +148,127 @@
         });
         
         function displayResults(analysis) {
-            // Relevant Industries
-            const industriesDiv = document.getElementById('relevantIndustries');
-            industriesDiv.innerHTML = '';
-            if (analysis.relevant_industries && analysis.relevant_industries.length > 0) {
-                const industriesList = document.createElement('ul');
-                industriesList.className = 'list-group';
-                
-                analysis.relevant_industries.forEach(industry => {
-                    const item = document.createElement('li');
-                    item.className = 'list-group-item';
-                    item.innerHTML = `<strong>${industry.name}</strong>: ${industry.reason}`;
-                    industriesList.appendChild(item);
-                });
-                
-                industriesDiv.appendChild(industriesList);
-            } else {
-                industriesDiv.innerHTML = '<p class="text-muted">No relevant industries found.</p>';
-            }
+            // LinkedIn URLs
+            const linkedinUrlsDiv = document.getElementById('linkedinUrls');
+            linkedinUrlsDiv.innerHTML = '';
             
-            // Example Companies
-            const companiesDiv = document.getElementById('exampleCompanies');
-            companiesDiv.innerHTML = '';
-            if (analysis.example_companies && analysis.example_companies.length > 0) {
-                const companiesList = document.createElement('ul');
-                companiesList.className = 'list-group';
+            if (analysis.linkedin_profiles && analysis.linkedin_profiles.length > 0) {
+                // Detailed LinkedIn search results with Gemini recommendations
+                const profilesContainer = document.createElement('div');
+                profilesContainer.className = 'container p-0';
                 
-                analysis.example_companies.forEach(company => {
-                    const item = document.createElement('li');
-                    item.className = 'list-group-item';
-                    item.innerHTML = `<strong>${company.name}</strong>: ${company.reason}`;
-                    companiesList.appendChild(item);
-                });
+                // Create a table structure for better organization
+                const table = document.createElement('table');
+                table.className = 'table table-hover';
                 
-                companiesDiv.appendChild(companiesList);
-            } else {
-                companiesDiv.innerHTML = '<p class="text-muted">No example companies found.</p>';
-            }
-            
-            // Relevant Roles
-            const rolesDiv = document.getElementById('relevantRoles');
-            rolesDiv.innerHTML = '';
-            if (analysis.relevant_role_types && analysis.relevant_role_types.length > 0) {
-                const rolesList = document.createElement('ul');
-                rolesList.className = 'list-group';
+                // Create table header
+                const thead = document.createElement('thead');
+                thead.className = 'table-light';
+                thead.innerHTML = `
+                    <tr>
+                        <th>Recommended Search</th>
+                        <th>Details</th>
+                        <th>Action</th>
+                    </tr>
+                `;
+                table.appendChild(thead);
                 
-                analysis.relevant_role_types.forEach(role => {
-                    const item = document.createElement('li');
-                    item.className = 'list-group-item';
-                    item.innerHTML = `<strong>${role.title}</strong>: ${role.reason}`;
-                    rolesList.appendChild(item);
-                });
+                // Create table body
+                const tbody = document.createElement('tbody');
                 
-                rolesDiv.appendChild(rolesList);
-            } else {
-                rolesDiv.innerHTML = '<p class="text-muted">No relevant roles found.</p>';
-            }
-        }
-        
-        function displayMentors(mentors) {
-            console.log("Displaying mentors:", mentors); // Debug log
-            const mentorsDiv = document.getElementById('skillMentors');
-            mentorsDiv.innerHTML = '';
-            
-            if (mentors && mentors.length > 0) {
-                // Create a direct HTML string for better performance
-                let htmlContent = '<div class="row g-3">';
-                
-                mentors.forEach(mentor => {
-                    // Add additional checks to handle potentially missing data
-                    const name = mentor.name || 'Unnamed Mentor';
-                    const skill = mentor.skill || 'General Mentoring';
-                    const profile = mentor.profile || 'https://adplist.org/mentors';
-                    const title = mentor.title || '';
-                    const experience = mentor.experience || '';
+                // Add each profile search recommendation
+                analysis.linkedin_profiles.forEach((profile, index) => {
+                    const row = document.createElement('tr');
+                    const isPrimary = profile.primary;
                     
-                    htmlContent += `
-                        <div class="col-12 col-md-6">
-                            <div class="card border-warning h-100">
-                                <div class="card-header bg-warning bg-opacity-10">
-                                    <strong>${name}</strong>
-                                </div>
-                                <div class="card-body">
-                                    ${title ? `<p class="card-text mb-2">${title}</p>` : ''}
-                                    <div class="d-flex align-items-center mb-3">
-                                        <span class="badge bg-primary me-2">${skill}</span>
-                                        ${experience ? `<small class="text-muted">• ${experience}</small>` : ''}
-                                    </div>
-                                    <a href="${profile}" target="_blank" class="btn btn-sm btn-warning">
-                                        View Profile
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
+                    // Highlight primary recommendations
+                    if (isPrimary) {
+                        row.className = 'table-primary';
+                    }
+                    
+                    // Create table cells
+                    row.innerHTML = `
+                        <td>
+                            <strong>${profile.role}</strong> in ${profile.industry}
+                            ${isPrimary ? '<span class="badge bg-success ms-2">Best Match</span>' : ''}
+                        </td>
+                        <td>
+                            <small class="text-muted">${profile.description}</small>
+                            ${profile.additional_params ? `<br><small class="badge bg-light text-dark">${profile.additional_params}</small>` : ''}
+                        </td>
+                        <td>
+                            <a href="${profile.url}" target="_blank" rel="noopener noreferrer" 
+                               class="btn ${isPrimary ? 'btn-primary' : 'btn-outline-secondary'} btn-sm">
+                               <i class="fab fa-linkedin me-1"></i> Search
+                            </a>
+                        </td>
                     `;
+                    
+                    tbody.appendChild(row);
                 });
                 
-                htmlContent += '</div>';
-                mentorsDiv.innerHTML = htmlContent;
-                console.log("Mentors displayed successfully"); // Debug log
+                table.appendChild(tbody);
+                profilesContainer.appendChild(table);
+                
+                // Add explanation text
+                const explanationDiv = document.createElement('div');
+                explanationDiv.className = 'alert alert-info mt-3 mb-0';
+                explanationDiv.innerHTML = `
+                    <p class="mb-1"><i class="fas fa-info-circle me-2"></i><strong>About these recommendations</strong></p>
+                    <p class="mb-0 small">These LinkedIn search queries have been automatically generated based on your networking goal. 
+                    They're designed to help you find the most relevant professionals for your networking needs.</p>
+                `;
+                
+                linkedinUrlsDiv.appendChild(profilesContainer);
+                linkedinUrlsDiv.appendChild(explanationDiv);
+                
+            } else if (analysis.linkedin_urls && analysis.linkedin_urls.length > 0) {
+                // Fallback to old format if linkedin_profiles is not available
+                // Create a container for organized links
+                const primaryLinks = document.createElement('div');
+                primaryLinks.className = 'mb-3';
+                primaryLinks.innerHTML = '<h6 class="mb-2">Recommended Primary Connections:</h6>';
+                
+                const secondaryLinks = document.createElement('div');
+                secondaryLinks.className = 'mt-3';
+                secondaryLinks.innerHTML = '<h6 class="mb-2">Additional Network Opportunities:</h6>';
+                
+                analysis.linkedin_urls.forEach(item => {
+                    const link = document.createElement('a');
+                    link.href = item.url;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer'; // Security best practice
+                    
+                    // Style primary and secondary links differently
+                    if (item.primary) {
+                        link.className = 'btn btn-primary btn-sm mb-2 me-2';
+                        link.innerHTML = `<i class="fab fa-linkedin me-1"></i> ${item.role} in ${item.industry}`;
+                        primaryLinks.appendChild(link);
+                    } else {
+                        link.className = 'btn btn-outline-secondary btn-sm mb-2 me-2';
+                        link.innerHTML = `<i class="fab fa-linkedin me-1"></i> ${item.role} in ${item.industry}`;
+                        secondaryLinks.appendChild(link);
+                    }
+                });
+                
+                linkedinUrlsDiv.appendChild(primaryLinks);
+                
+                // Only add secondary section if there are secondary links
+                if (secondaryLinks.childElementCount > 1) { // >1 because it has the heading
+                    linkedinUrlsDiv.appendChild(secondaryLinks);
+                }
             } else {
-                console.log("No mentors found to display"); // Debug log
-                mentorsDiv.innerHTML = '<div class="alert alert-warning">No mentors found for your skills.</div>';
+                // Default LinkedIn search with improved guidance
+                const defaultDiv = document.createElement('div');
+                defaultDiv.className = 'alert alert-info';
+                defaultDiv.innerHTML = `
+                    <p class="mb-2">We couldn't generate specific search links based on your goal.</p>
+                    <a href="https://www.linkedin.com/search/results/people/" target="_blank" class="btn btn-outline-primary btn-sm">
+                        <i class="fab fa-linkedin me-1"></i> Find Connections on LinkedIn
+                    </a>
+                    <p class="small text-muted mt-2">Tip: Try to be more specific in your networking goal.</p>
+                `;
+                linkedinUrlsDiv.appendChild(defaultDiv);
             }
         }
     });
