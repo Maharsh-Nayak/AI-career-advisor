@@ -1,0 +1,11 @@
+{
+  "name": "ai-career-advisor",
+  "version": "1.0.0",
+  "description": "A web application that analyzes user skills and fetches live job postings to provide career advice.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

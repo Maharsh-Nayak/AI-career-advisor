@@ -81,6 +81,56 @@ AI-career-advisor/
 7. **Access the application**:
    Open your browser and navigate to `http://127.0.0.1:8000/`
 
+## Production Deployment
+
+For deploying the application to production for all users, follow these steps:
+
+1. **Set up environment variables**:
+   Copy the `.env.example` file to `.env` and fill in all the required values:
+   ```bash
+   cp .env.example .env
+   # Edit the .env file with your production values
+   ```
+
+2. **Database setup**:
+   The application is configured to use PostgreSQL in production. Make sure to:
+   - Create a PostgreSQL database
+   - Update the database credentials in your `.env` file
+
+3. **Using Docker (recommended)**:
+   ```bash
+   # Build and run using docker-compose
+   docker-compose up -d
+   
+   # Run migrations
+   docker-compose exec web python manage.py migrate
+   
+   # Create a superuser
+   docker-compose exec web python manage.py createsuperuser
+   ```
+
+4. **Manual deployment**:
+   If not using Docker:
+   ```bash
+   # Install dependencies
+   pip install -r requirements.txt
+   
+   # Collect static files
+   python manage.py collectstatic
+   
+   # Run migrations
+   python manage.py migrate
+   
+   # Start the server with gunicorn
+   gunicorn career_advisor.wsgi:application
+   ```
+
+5. **Set up a reverse proxy**:
+   For production, use Nginx or Apache as a reverse proxy in front of Gunicorn.
+
+6. **SSL Certificate**:
+   Secure your application with an SSL certificate using Let's Encrypt.
+
 ## Usage
 
 1. Enter your skills in the textarea (one skill per line)

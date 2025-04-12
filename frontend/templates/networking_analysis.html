@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}CareerPath AI - Networking Analysis{% endblock %}
+
+{% block content %}
+<div class="content-section">
+    <div class="container">
+        <h1 class="text-center mb-5">Networking Analysis</h1>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="page-card">
+                    <h5 class="mb-4 fw-bold">Career Networking Assistant</h5>
+                    <p class="text-muted mb-4">Enter your profile details and networking goals to get personalized recommendations on industries, companies, and roles to target in your networking efforts.</p>
+                    
+                    <form id="networkingForm" class="mt-4">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="current_role" class="form-label">Current Role/Field</label>
+                            <input type="text" class="form-control" id="current_role" name="current_role" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="industry" class="form-label">Industry</label>
+                            <input type="text" class="form-control" id="industry" name="industry" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="skills" class="form-label">Key Skills (comma-separated)</label>
+                            <input type="text" class="form-control" id="skills" name="skills" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="experience" class="form-label">Years of Experience</label>
+                            <input type="number" class="form-control" id="experience" name="experience" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="location" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="location" name="location" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="networking_goal" class="form-label">Your Networking Goal</label>
+                            <textarea class="form-control" id="networking_goal" name="networking_goal" rows="3" required></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">Analyze</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div id="results" class="d-none">
+                    <div class="page-card mb-4">
+                        <div class="bg-primary text-white p-3 rounded-top">
+                            <h5 class="mb-0">Relevant Industries</h5>
+                        </div>
+                        <div class="p-3">
+                            <div id="relevantIndustries"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="page-card mb-4">
+                        <div class="bg-success text-white p-3 rounded-top">
+                            <h5 class="mb-0">Example Companies</h5>
+                        </div>
+                        <div class="p-3">
+                            <div id="exampleCompanies"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="page-card mb-4">
+                        <div class="bg-info text-white p-3 rounded-top">
+                            <h5 class="mb-0">Relevant Role Types</h5>
+                        </div>
+                        <div class="p-3">
+                            <div id="relevantRoles"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="page-card mb-4">
+                        <div class="bg-warning text-dark p-3 rounded-top">
+                            <h5 class="mb-0">Skill-Based Mentors</h5>
+                        </div>
+                        <div class="p-3">
+                            <div id="skillMentors"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="loading" class="d-none text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Analyzing your networking profile...</p>
+                </div>
+                
+                <div id="error" class="d-none alert alert-danger mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('networkingForm');
+        const results = document.getElementById('results');
+        const loading = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
+        
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Hide results and error, show loading
+            results.classList.add('d-none');
+            errorDiv.classList.add('d-none');
+            loading.classList.remove('d-none');
+            
+            const formData = new FormData(form);
+            
+            try {
+                // Use the frontend route that works (not the api route)
+                const response = await fetch('/networking-analysis/', {
+                    method: 'POST',
+                    body: formData,
+                });
+                
+                // Check if response is ok
+                if (!response.ok) {
+                    throw new Error(`Server responded with status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log("API Response:", data); // Debug log
+                
+                if (data.status === 'success' || data.mentors) {
+                    // Display the results
+                    if (data.analysis) {
+                        displayResults(data.analysis);
+                    }
+                    
+                    // Always try to display mentors if they exist
+                    if (data.mentors && data.mentors.length > 0) {
+                        displayMentors(data.mentors);
+                        document.querySelector('.page-card.mb-4:last-child').classList.remove('d-none');
+                    } else {
+                        document.querySelector('.page-card.mb-4:last-child').classList.add('d-none');
+                    }
+                    
+                    results.classList.remove('d-none');
+                } else {
+                    // Show error message
+                    errorDiv.textContent = data.message || 'An error occurred during analysis';
+                    errorDiv.classList.remove('d-none');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorDiv.textContent = 'An error occurred while processing your request: ' + error.message;
+                errorDiv.classList.remove('d-none');
+            } finally {
+                loading.classList.add('d-none');
+            }
+        });
+        
+        function displayResults(analysis) {
+            // Relevant Industries
+            const industriesDiv = document.getElementById('relevantIndustries');
+            industriesDiv.innerHTML = '';
+            if (analysis.relevant_industries && analysis.relevant_industries.length > 0) {
+                const industriesList = document.createElement('ul');
+                industriesList.className = 'list-group';
+                
+                analysis.relevant_industries.forEach(industry => {
+                    const item = document.createElement('li');
+                    item.className = 'list-group-item';
+                    item.innerHTML = `<strong>${industry.name}</strong>: ${industry.reason}`;
+                    industriesList.appendChild(item);
+                });
+                
+                industriesDiv.appendChild(industriesList);
+            } else {
+                industriesDiv.innerHTML = '<p class="text-muted">No relevant industries found.</p>';
+            }
+            
+            // Example Companies
+            const companiesDiv = document.getElementById('exampleCompanies');
+            companiesDiv.innerHTML = '';
+            if (analysis.example_companies && analysis.example_companies.length > 0) {
+                const companiesList = document.createElement('ul');
+                companiesList.className = 'list-group';
+                
+                analysis.example_companies.forEach(company => {
+                    const item = document.createElement('li');
+                    item.className = 'list-group-item';
+                    item.innerHTML = `<strong>${company.name}</strong>: ${company.reason}`;
+                    companiesList.appendChild(item);
+                });
+                
+                companiesDiv.appendChild(companiesList);
+            } else {
+                companiesDiv.innerHTML = '<p class="text-muted">No example companies found.</p>';
+            }
+            
+            // Relevant Roles
+            const rolesDiv = document.getElementById('relevantRoles');
+            rolesDiv.innerHTML = '';
+            if (analysis.relevant_role_types && analysis.relevant_role_types.length > 0) {
+                const rolesList = document.createElement('ul');
+                rolesList.className = 'list-group';
+                
+                analysis.relevant_role_types.forEach(role => {
+                    const item = document.createElement('li');
+                    item.className = 'list-group-item';
+                    item.innerHTML = `<strong>${role.title}</strong>: ${role.reason}`;
+                    rolesList.appendChild(item);
+                });
+                
+                rolesDiv.appendChild(rolesList);
+            } else {
+                rolesDiv.innerHTML = '<p class="text-muted">No relevant roles found.</p>';
+            }
+        }
+        
+        function displayMentors(mentors) {
+            console.log("Displaying mentors:", mentors); // Debug log
+            const mentorsDiv = document.getElementById('skillMentors');
+            mentorsDiv.innerHTML = '';
+            
+            if (mentors && mentors.length > 0) {
+                // Create a direct HTML string for better performance
+                let htmlContent = '<div class="row g-3">';
+                
+                mentors.forEach(mentor => {
+                    // Add additional checks to handle potentially missing data
+                    const name = mentor.name || 'Unnamed Mentor';
+                    const skill = mentor.skill || 'General Mentoring';
+                    const profile = mentor.profile || 'https://adplist.org/mentors';
+                    const title = mentor.title || '';
+                    const experience = mentor.experience || '';
+                    
+                    htmlContent += `
+                        <div class="col-12 col-md-6">
+                            <div class="card border-warning h-100">
+                                <div class="card-header bg-warning bg-opacity-10">
+                                    <strong>${name}</strong>
+                                </div>
+                                <div class="card-body">
+                                    ${title ? `<p class="card-text mb-2">${title}</p>` : ''}
+                                    <div class="d-flex align-items-center mb-3">
+                                        <span class="badge bg-primary me-2">${skill}</span>
+                                        ${experience ? `<small class="text-muted">• ${experience}</small>` : ''}
+                                    </div>
+                                    <a href="${profile}" target="_blank" class="btn btn-sm btn-warning">
+                                        View Profile
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                htmlContent += '</div>';
+                mentorsDiv.innerHTML = htmlContent;
+                console.log("Mentors displayed successfully"); // Debug log
+            } else {
+                console.log("No mentors found to display"); // Debug log
+                mentorsDiv.innerHTML = '<div class="alert alert-warning">No mentors found for your skills.</div>';
+            }
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %} 

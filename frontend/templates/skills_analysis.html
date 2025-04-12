@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}CareerPath AI - Skills Analysis{% endblock %}
+
+{% block content %}
+<div class="content-section">
+    <div class="container">
+        <h1 class="text-center mb-5">Skills Analysis</h1>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="page-card">
+                    <h4 class="mb-4 fw-bold">Enter Your Skills</h4>
+                    <p class="text-muted mb-4">List your technical skills below (one per line) to receive personalized career recommendations and job matches.</p>
+                    
+                    <form id="skillsForm" method="post" action="{% url 'jobs:job_analysis' %}">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label for="skills" class="form-label">Your Skills</label>
+                            <textarea class="form-control" id="skills" name="skills" rows="8" placeholder="Enter your skills, one per line:&#10;&#10;Python&#10;JavaScript&#10;SQL&#10;Machine Learning" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            Analyze Skills
+                        </button>
+                    </form>
+
+                    <div id="loading" class="d-none mt-4 text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Analyzing your skills...</p>
+                    </div>
+                </div>
+
+                <div id="results" class="d-none mt-4">
+                    <!-- Job Analysis Section -->
+                    <div class="page-card mb-4">
+                        <h4 class="fw-bold mb-3">Career Match Analysis</h4>
+                        <div id="analysisResults"></div>
+                    </div>
+
+                    <!-- Live Jobs Section -->
+                    <div class="page-card">
+                        <h4 class="fw-bold mb-3">Matching Jobs</h4>
+                        <div id="jobResults"></div>
+                    </div>
+                    
+                    <!-- Course Recommendations Section -->
+                    <div class="page-card mt-4">
+                        <h4 class="fw-bold mb-3">Course Recommendations</h4>
+                        <p class="text-muted mb-3">Based on your missing skills, here are some recommended courses to help you improve your qualifications:</p>
+                        <div id="courseRecommendations"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('skillsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    document.getElementById('loading').classList.remove('d-none');
+    document.getElementById('results').classList.add('d-none');
+    
+    fetch('{% url "jobs:job_analysis" %}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('loading').classList.add('d-none');
+        document.getElementById('results').classList.remove('d-none');
+        
+        // Display analysis results
+        const analysisDiv = document.getElementById('analysisResults');
+        analysisDiv.innerHTML = '';
+        
+        if (data.analysis && data.analysis.length > 0) {
+            data.analysis.forEach(result => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'mb-4 p-4 border rounded';
+                resultDiv.innerHTML = `
+                    <h5 class="fw-bold text-primary">${result.title}</h5>
+                    <div class="mt-2">
+                        <div class="mb-2">
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar" role="progressbar" style="width: ${result.percentage}%;" 
+                                    aria-valuenow="${result.percentage}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <p class="mt-1 text-muted">Match: ${result.percentage}%</p>
+                        </div>
+                        <div class="mt-3">
+                            <h6 class="text-success">Matching Skills</h6>
+                            <p>${result.matching.join(', ') || 'None'}</p>
+                            
+                            <h6 class="text-danger mt-2">Missing Skills</h6>
+                            <p>${result.missing.join(', ') || 'None'}</p>
+                        </div>
+                    </div>
+                `;
+                analysisDiv.appendChild(resultDiv);
+            });
+        } else {
+            analysisDiv.innerHTML = '<p class="text-muted">No career match results available.</p>';
+        }
+        
+        // Display job results
+        const jobsDiv = document.getElementById('jobResults');
+        jobsDiv.innerHTML = '';
+        
+        if (data.live_jobs && data.live_jobs.length > 0) {
+            data.live_jobs.forEach(job => {
+                const jobDiv = document.createElement('div');
+                jobDiv.className = 'mb-4 p-4 border rounded';
+                jobDiv.innerHTML = `
+                    <h5 class="fw-bold text-primary">${job.title}</h5>
+                    <p class="mb-1 fw-semibold">${job.company_name}</p>
+                    <p class="mb-1 text-muted">${job.location}</p>
+                    <p class="mb-3 small text-muted">Source: ${job.source}</p>
+                    <a href="${job.url}" target="_blank" class="btn btn-primary">
+                        Apply Now
+                    </a>
+                `;
+                jobsDiv.appendChild(jobDiv);
+            });
+        } else {
+            jobsDiv.innerHTML = '<p class="text-muted">No matching jobs found.</p>';
+        }
+        
+        // Display course recommendations
+        displayCourseRecommendations(data.course_recommendations);
+    })
+    .catch(error => {
+        document.getElementById('loading').classList.add('d-none');
+        alert('Error analyzing skills: ' + error.message);
+    });
+});
+
+function displayCourseRecommendations(courseRecommendations) {
+    const recommendationsDiv = document.getElementById('courseRecommendations');
+    recommendationsDiv.innerHTML = '';
+    
+    if (courseRecommendations && Object.keys(courseRecommendations).length > 0) {
+        // First, show potential job matches if available
+        if (courseRecommendations.potential_job_matches) {
+            const jobMatchesDiv = document.createElement('div');
+            jobMatchesDiv.className = 'alert alert-success mb-4';
+            jobMatchesDiv.innerHTML = `
+                <h5 class="alert-heading"><i class="fas fa-star me-2"></i>Unlock Your Potential!</h5>
+                <p class="mb-0">After completing all these recommended courses, you'll qualify for these roles:</p>
+                <ul class="mt-2 mb-0">
+                    ${courseRecommendations.potential_job_matches.map(job => `<li><strong>${job}</strong></li>`).join('')}
+                </ul>
+            `;
+            recommendationsDiv.appendChild(jobMatchesDiv);
+            
+            // Remove from the object so we don't process it as a skill
+            delete courseRecommendations.potential_job_matches;
+        }
+        
+        // Get all skills
+        const skills = Object.keys(courseRecommendations);
+        
+        // Create a container for all skills
+        const allSkillsContainer = document.createElement('div');
+        allSkillsContainer.className = 'row row-cols-1 mb-4';
+        
+        // Process each skill
+        skills.forEach(skill => {
+            const courses = courseRecommendations[skill];
+            if (courses && courses.length > 0) {
+                // Create skill section
+                const skillCol = document.createElement('div');
+                skillCol.className = 'col mb-4';
+                
+                const skillCard = document.createElement('div');
+                skillCard.className = 'card border-primary';
+                
+                // Create header with skill name
+                const skillHeader = document.createElement('div');
+                skillHeader.className = 'card-header bg-primary text-white';
+                skillHeader.innerHTML = `<h5 class="mb-0">${skill} <span class="badge bg-light text-primary ms-2">Top ${Math.min(3, courses.length)} Courses</span></h5>`;
+                
+                // Create body for courses
+                const skillBody = document.createElement('div');
+                skillBody.className = 'card-body';
+                
+                // If there's a job_match_after_completion field, show it
+                if (courses.job_match_after_completion) {
+                    const jobMatchDiv = document.createElement('div');
+                    jobMatchDiv.className = 'alert alert-info mb-3';
+                    jobMatchDiv.innerHTML = `<p class="mb-0"><strong>After mastering this skill:</strong> ${courses.job_match_after_completion}</p>`;
+                    skillBody.appendChild(jobMatchDiv);
+                }
+                
+                // Create container for courses
+                const coursesRow = document.createElement('div');
+                coursesRow.className = 'row row-cols-1 row-cols-md-3 g-3';
+                
+                // Show only up to 3 courses
+                const coursesToShow = courses.slice(0, 3);
+                
+                coursesToShow.forEach(course => {
+                    const courseCol = document.createElement('div');
+                    courseCol.className = 'col';
+                    
+                    courseCol.innerHTML = `
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-header bg-light py-2">
+                                <h6 class="card-title mb-0 text-primary">${course.course_title}</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex gap-1 mb-2 flex-wrap">
+                                    <span class="badge bg-info">${course.platform}</span>
+                                    ${course.level ? `<span class="badge bg-secondary">${course.level}</span>` : ''}
+                                </div>
+                                ${course.description ? `<p class="card-text small text-muted mb-3">${course.description}</p>` : ''}
+                                <a href="${course.url}" target="_blank" class="btn btn-sm btn-primary w-100">
+                                    <i class="fas fa-external-link-alt me-1"></i> Enroll Now
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    
+                    coursesRow.appendChild(courseCol);
+                });
+                
+                skillBody.appendChild(coursesRow);
+                skillCard.appendChild(skillHeader);
+                skillCard.appendChild(skillBody);
+                skillCol.appendChild(skillCard);
+                allSkillsContainer.appendChild(skillCol);
+            }
+        });
+        
+        recommendationsDiv.appendChild(allSkillsContainer);
+    } else {
+        recommendationsDiv.innerHTML = '<div class="alert alert-info">No course recommendations available for the missing skills.</div>';
+    }
+}
+</script>
+{% endblock %} 
