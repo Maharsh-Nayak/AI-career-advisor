@@ -128,9 +128,13 @@ def profile_view(request):
         user_form = UserUpdateForm(instance=request.user)
         profile_form = ProfileUpdateForm(instance=request.user.profile)
     
+    # Get saved jobs from the user's profile
+    saved_jobs = request.user.profile.get_saved_jobs()
+    
     context = {
         'user_form': user_form,
-        'profile_form': profile_form
+        'profile_form': profile_form,
+        'saved_jobs': saved_jobs
     }
     
     return render(request, 'users/profile.html', context)

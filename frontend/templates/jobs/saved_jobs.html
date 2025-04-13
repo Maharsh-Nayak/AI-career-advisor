@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}CareerPath AI - Saved Jobs{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="content-section py-4">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Saved Jobs</h2>
+            <a href="{% url 'jobs:job_listings' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Job Listings
+            </a>
+        </div>
+
+        {% if saved_jobs %}
+        <div class="row">
+            {% for job in saved_jobs %}
+            <div class="col-12 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="card-title mb-1">{{ job.title }}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">{{ job.company_name }}</h6>
+                            </div>
+                            {% if job.relevance_score %}
+                            <span class="badge bg-primary">{{ job.relevance_score }}% Match</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mt-2">
+                            <p class="mb-1">
+                                <i class="fas fa-map-marker-alt text-muted me-2"></i>{{ job.location }}
+                            </p>
+                            <p class="mb-1">
+                                <i class="fas fa-globe text-muted me-2"></i>Source: {{ job.source }}
+                            </p>
+                            <p class="mb-1">
+                                <i class="fas fa-clock text-muted me-2"></i>Saved on: {{ job.saved_at|date:"M d, Y" }}
+                            </p>
+                        </div>
+
+                        <div class="mt-3">
+                            <a href="{{ job.url }}" target="_blank" class="btn btn-outline-primary me-2">
+                                <i class="fas fa-external-link-alt me-1"></i>View Job
+                            </a>
+                            <button class="btn btn-outline-danger unsave-job" 
+                                    data-job-title="{{ job.title }}"
+                                    data-job-company="{{ job.company_name }}"
+                                    data-job-url="{{ job.url }}">
+                                <i class="fas fa-trash-alt me-1"></i>Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-bookmark text-muted" style="font-size: 4rem;"></i>
+            </div>
+            <h3>No Saved Jobs Yet</h3>
+            <p class="text-muted">Start saving jobs from the job listings page to see them here.</p>
+            <a href="{% url 'jobs:job_listings' %}" class="btn btn-primary mt-3">
+                <i class="fas fa-search me-2"></i>Browse Jobs
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const unsaveButtons = document.querySelectorAll('.unsave-job');
+    
+    unsaveButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            if (!confirm('Are you sure you want to remove this job from your saved jobs?')) {
+                return;
+            }
+
+            const jobData = {
+                title: this.dataset.jobTitle,
+                company_name: this.dataset.jobCompany,
+                url: this.dataset.jobUrl
+            };
+
+            fetch('/jobs/save/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(jobData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Remove the job card from the UI
+                    const jobCard = this.closest('.col-12');
+                    jobCard.style.transition = 'opacity 0.3s ease-out';
+                    jobCard.style.opacity = '0';
+                    setTimeout(() => {
+                        jobCard.remove();
+                        // Check if there are no more saved jobs
+                        if (document.querySelectorAll('.col-12').length === 0) {
+                            location.reload(); // Reload to show the empty state
+                        }
+                    }, 300);
+                } else {
+                    alert('Failed to remove job: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while removing the job');
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %} 

@@ -70,4 +70,22 @@ class NetworkingGoal(models.Model):
     
     def __str__(self):
         username = self.user.username if self.user else "Anonymous"
-        return f"Networking Goal for {username} - {self.created_at.strftime('%Y-%m-%d')}" 
+        return f"Networking Goal for {username} - {self.created_at.strftime('%Y-%m-%d')}"
+
+class SavedJob(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    company_name = models.CharField(max_length=200)
+    url = models.URLField()
+    source = models.CharField(max_length=50)
+    location = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    saved_at = models.DateTimeField(auto_now_add=True)
+    relevance_score = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['-saved_at']
+        unique_together = ['user', 'url']  # Prevent duplicate saves
+    
+    def __str__(self):
+        return f"{self.title} at {self.company_name} - Saved by {self.user.username}" 

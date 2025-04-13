@@ -7,7 +7,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', landing_page, name='landing'),
     path('home/', home, name='home'),
-    path('', include('jobs.urls')),
+    path('jobs/', include('jobs.urls')),
     path('', include('frontend.urls')),
     path('users/', include('users.urls')),
 ] 

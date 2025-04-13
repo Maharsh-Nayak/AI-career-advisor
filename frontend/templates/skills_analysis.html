@@ -81,8 +81,8 @@ document.getElementById('skillsForm').addEventListener('submit', function(e) {
         const analysisDiv = document.getElementById('analysisResults');
         analysisDiv.innerHTML = '';
         
-        if (data.analysis && data.analysis.length > 0) {
-            data.analysis.forEach(result => {
+        if (data.analysis && data.analysis.results && data.analysis.results.length > 0) {
+            data.analysis.results.forEach(result => {
                 const resultDiv = document.createElement('div');
                 resultDiv.className = 'mb-4 p-4 border rounded';
                 resultDiv.innerHTML = `
@@ -90,22 +90,36 @@ document.getElementById('skillsForm').addEventListener('submit', function(e) {
                     <div class="mt-2">
                         <div class="mb-2">
                             <div class="progress" style="height: 10px;">
-                                <div class="progress-bar" role="progressbar" style="width: ${result.percentage}%;" 
-                                    aria-valuenow="${result.percentage}" aria-valuemin="0" aria-valuemax="100"></div>
+                                <div class="progress-bar" role="progressbar" style="width: ${result.match_percentage}%;" 
+                                    aria-valuenow="${result.match_percentage}" aria-valuemin="0" aria-valuemax="100"></div>
                             </div>
-                            <p class="mt-1 text-muted">Match: ${result.percentage}%</p>
+                            <p class="mt-1 text-muted">Match: ${result.match_percentage}%</p>
                         </div>
                         <div class="mt-3">
                             <h6 class="text-success">Matching Skills</h6>
-                            <p>${result.matching.join(', ') || 'None'}</p>
+                            <p>${result.matching_skills.join(', ') || 'None'}</p>
                             
                             <h6 class="text-danger mt-2">Missing Skills</h6>
-                            <p>${result.missing.join(', ') || 'None'}</p>
+                            <p>${result.missing_skills.join(', ') || 'None'}</p>
+                            
+                            <h6 class="text-info mt-2">Additional Skills</h6>
+                            <p>${result.extra_skills.join(', ') || 'None'}</p>
                         </div>
                     </div>
                 `;
                 analysisDiv.appendChild(resultDiv);
             });
+            
+            // Add a summary section if there's a best match
+            if (data.analysis.best_match) {
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = 'alert alert-success mt-4';
+                summaryDiv.innerHTML = `
+                    <h5 class="alert-heading">Best Career Match</h5>
+                    <p class="mb-0">Your skills best align with: <strong>${data.analysis.best_match.title}</strong> (${data.analysis.best_match.match_percentage}% match)</p>
+                `;
+                analysisDiv.insertBefore(summaryDiv, analysisDiv.firstChild);
+            }
         } else {
             analysisDiv.innerHTML = '<p class="text-muted">No career match results available.</p>';
         }
@@ -155,7 +169,14 @@ function displayCourseRecommendations(courseRecommendations) {
                 <h5 class="alert-heading"><i class="fas fa-star me-2"></i>Unlock Your Potential!</h5>
                 <p class="mb-0">After completing all these recommended courses, you'll qualify for these roles:</p>
                 <ul class="mt-2 mb-0">
-                    ${courseRecommendations.potential_job_matches.map(job => `<li><strong>${job}</strong></li>`).join('')}
+                    ${courseRecommendations.potential_job_matches.map(job => `
+                        <li>
+                            <strong>${job.title}</strong>
+                            <span class="text-muted ms-2">
+                                (Current match: ${job.current_match}% → Potential match: ${job.potential_match}%)
+                            </span>
+                        </li>
+                    `).join('')}
                 </ul>
             `;
             recommendationsDiv.appendChild(jobMatchesDiv);

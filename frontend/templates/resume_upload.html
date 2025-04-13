@@ -345,17 +345,17 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Show preview of top job match
             previewJobMatch.innerHTML = '';
-            if (data.analysis && data.analysis.length > 0) {
-                const topMatch = data.analysis[0];
+            if (data.analysis && data.analysis.best_match) {
+                const topMatch = data.analysis.best_match;
                 previewJobMatch.innerHTML = `
                     <h6 class="fw-bold text-primary">${topMatch.title}</h6>
                     <div class="mt-2">
                         <div class="mb-2">
                             <div class="progress" style="height: 10px;">
-                                <div class="progress-bar" role="progressbar" style="width: ${topMatch.percentage}%;" 
-                                    aria-valuenow="${topMatch.percentage}" aria-valuemin="0" aria-valuemax="100"></div>
+                                <div class="progress-bar" role="progressbar" style="width: ${topMatch.match_percentage}%;" 
+                                    aria-valuenow="${topMatch.match_percentage}" aria-valuemin="0" aria-valuemax="100"></div>
                             </div>
-                            <p class="mt-1 text-muted">Match: ${topMatch.percentage}%</p>
+                            <p class="mt-1 text-muted">Match: ${topMatch.match_percentage}%</p>
                         </div>
                     </div>
                 `;
@@ -382,8 +382,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const analysisDiv = document.getElementById('analysisResults');
             analysisDiv.innerHTML = '';
             
-            if (data.analysis && data.analysis.length > 0) {
-                data.analysis.forEach(result => {
+            if (data.analysis && data.analysis.results && data.analysis.results.length > 0) {
+                data.analysis.results.forEach(result => {
                     const resultCol = document.createElement('div');
                     resultCol.className = 'col';
                     
@@ -395,17 +395,20 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="card-body">
                                 <div class="mb-3">
                                     <div class="progress" style="height: 10px;">
-                                        <div class="progress-bar" role="progressbar" style="width: ${result.percentage}%;" 
-                                            aria-valuenow="${result.percentage}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        <div class="progress-bar" role="progressbar" style="width: ${result.match_percentage}%;" 
+                                            aria-valuenow="${result.match_percentage}" aria-valuemin="0" aria-valuemax="100"></div>
                                     </div>
-                                    <p class="mt-1 text-muted">Match: ${result.percentage}%</p>
+                                    <p class="mt-1 text-muted">Match: ${result.match_percentage}%</p>
                                 </div>
                                 <div>
                                     <h6 class="text-success">Matching Skills</h6>
-                                    <p>${result.matching.join(', ') || 'None'}</p>
+                                    <p>${result.matching_skills.join(', ') || 'None'}</p>
                                     
                                     <h6 class="text-danger mt-2">Missing Skills</h6>
-                                    <p class="mb-0">${result.missing.join(', ') || 'None'}</p>
+                                    <p class="mb-0">${result.missing_skills.join(', ') || 'None'}</p>
+                                    
+                                    <h6 class="text-info mt-2">Additional Skills</h6>
+                                    <p class="mb-0">${result.extra_skills.join(', ') || 'None'}</p>
                                 </div>
                             </div>
                         </div>
@@ -495,7 +498,14 @@ function displayCourseRecommendations(courseRecommendations) {
                 <h5 class="alert-heading"><i class="fas fa-star me-2"></i>Unlock Your Potential!</h5>
                 <p class="mb-0">After completing all these recommended courses, you'll qualify for these roles:</p>
                 <ul class="mt-2 mb-0">
-                    ${courseRecommendations.potential_job_matches.map(job => `<li><strong>${job}</strong></li>`).join('')}
+                    ${courseRecommendations.potential_job_matches.map(job => `
+                        <li>
+                            <strong>${job.title}</strong>
+                            <span class="text-muted ms-2">
+                                (Current match: ${job.current_match}% → Potential match: ${job.potential_match}%)
+                            </span>
+                        </li>
+                    `).join('')}
                 </ul>
             `;
             recommendationsDiv.appendChild(jobMatchesDiv);
@@ -504,82 +514,83 @@ function displayCourseRecommendations(courseRecommendations) {
             delete courseRecommendations.potential_job_matches;
         }
         
-        // Get all skills
-        const skills = Object.keys(courseRecommendations);
+        // Get all skills (excluding special keys)
+        const skills = Object.keys(courseRecommendations).filter(key => 
+            key !== 'potential_job_matches' && 
+            key !== 'skill_prerequisites'
+        );
         
-        // Create a container for all skills
-        const skillsGrid = document.createElement('div');
-        skillsGrid.className = 'row row-cols-1 row-cols-lg-2 g-4 mb-4';
-        
-        // Process each skill
-        skills.forEach(skill => {
-            const courses = courseRecommendations[skill];
-            if (courses && courses.length > 0) {
-                // Create skill section
-                const skillCol = document.createElement('div');
-                skillCol.className = 'col';
-                
-                const skillCard = document.createElement('div');
-                skillCard.className = 'card h-100 border-primary';
-                
-                // Create header with skill name
-                const skillHeader = document.createElement('div');
-                skillHeader.className = 'card-header bg-primary text-white';
-                skillHeader.innerHTML = `<h5 class="mb-0">${skill} <span class="badge bg-light text-primary ms-2">Top ${Math.min(3, courses.length)} Courses</span></h5>`;
-                
-                // Create body for courses
-                const skillBody = document.createElement('div');
-                skillBody.className = 'card-body';
-                
-                // If there's a job_match_after_completion field, show it
-                if (courses.job_match_after_completion) {
-                    const jobMatchDiv = document.createElement('div');
-                    jobMatchDiv.className = 'alert alert-info mb-3';
-                    jobMatchDiv.innerHTML = `<p class="mb-0"><strong>After mastering this skill:</strong> ${courses.job_match_after_completion}</p>`;
-                    skillBody.appendChild(jobMatchDiv);
-                }
-                
-                // Create container for courses
-                const coursesRow = document.createElement('div');
-                coursesRow.className = 'row row-cols-1 row-cols-md-3 g-3';
-                
-                // Show only up to 3 courses
-                const coursesToShow = courses.slice(0, 3);
-                
-                coursesToShow.forEach(course => {
-                    const courseCol = document.createElement('div');
-                    courseCol.className = 'col';
+        if (skills.length > 0) {
+            // Create a container for all skills
+            const skillsGrid = document.createElement('div');
+            skillsGrid.className = 'row row-cols-1 row-cols-lg-2 g-4 mb-4';
+            
+            // Process each skill
+            skills.forEach(skill => {
+                const courses = courseRecommendations[skill];
+                if (courses && Array.isArray(courses) && courses.length > 0) {
+                    // Create skill section
+                    const skillCol = document.createElement('div');
+                    skillCol.className = 'col';
                     
-                    courseCol.innerHTML = `
-                        <div class="card h-100 shadow-sm">
-                            <div class="card-header bg-light py-2">
-                                <h6 class="card-title mb-0 text-primary">${course.course_title}</h6>
-                            </div>
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex gap-1 mb-2 flex-wrap">
-                                    <span class="badge bg-info">${course.platform}</span>
-                                    ${course.level ? `<span class="badge bg-secondary">${course.level}</span>` : ''}
+                    const skillCard = document.createElement('div');
+                    skillCard.className = 'card h-100 border-primary';
+                    
+                    // Create header with skill name
+                    const skillHeader = document.createElement('div');
+                    skillHeader.className = 'card-header bg-primary text-white';
+                    skillHeader.innerHTML = `<h5 class="mb-0">${skill} <span class="badge bg-light text-primary ms-2">Top ${Math.min(3, courses.length)} Courses</span></h5>`;
+                    
+                    // Create body for courses
+                    const skillBody = document.createElement('div');
+                    skillBody.className = 'card-body';
+                    
+                    // Create container for courses
+                    const coursesRow = document.createElement('div');
+                    coursesRow.className = 'row row-cols-1 row-cols-md-3 g-3';
+                    
+                    // Show only up to 3 courses
+                    const coursesToShow = courses.slice(0, 3);
+                    
+                    coursesToShow.forEach(course => {
+                        const courseCol = document.createElement('div');
+                        courseCol.className = 'col';
+                        
+                        courseCol.innerHTML = `
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-header bg-light py-2">
+                                    <h6 class="card-title mb-0 text-primary">${course.course_title || course.title}</h6>
                                 </div>
-                                ${course.description ? `<p class="card-text small text-muted mb-3">${course.description}</p>` : ''}
-                                <a href="${course.url}" target="_blank" class="btn btn-sm btn-primary w-100 mt-auto">
-                                    <i class="fas fa-external-link-alt me-1"></i> Enroll Now
-                                </a>
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex gap-1 mb-2 flex-wrap">
+                                        <span class="badge bg-info">${course.platform}</span>
+                                        ${course.level || course.difficulty_level ? 
+                                            `<span class="badge bg-secondary">${course.level || course.difficulty_level}</span>` : ''}
+                                    </div>
+                                    ${course.description ? 
+                                        `<p class="card-text small text-muted mb-3">${course.description}</p>` : ''}
+                                    <a href="${course.url}" target="_blank" class="btn btn-sm btn-primary w-100 mt-auto">
+                                        <i class="fas fa-external-link-alt me-1"></i> Enroll Now
+                                    </a>
+                                </div>
                             </div>
-                        </div>
-                    `;
+                        `;
+                        
+                        coursesRow.appendChild(courseCol);
+                    });
                     
-                    coursesRow.appendChild(courseCol);
-                });
-                
-                skillBody.appendChild(coursesRow);
-                skillCard.appendChild(skillHeader);
-                skillCard.appendChild(skillBody);
-                skillCol.appendChild(skillCard);
-                skillsGrid.appendChild(skillCol);
-            }
-        });
-        
-        recommendationsDiv.appendChild(skillsGrid);
+                    skillBody.appendChild(coursesRow);
+                    skillCard.appendChild(skillHeader);
+                    skillCard.appendChild(skillBody);
+                    skillCol.appendChild(skillCard);
+                    skillsGrid.appendChild(skillCol);
+                }
+            });
+            
+            recommendationsDiv.appendChild(skillsGrid);
+        } else {
+            recommendationsDiv.innerHTML = '<div class="alert alert-info">No specific course recommendations available.</div>';
+        }
     } else {
         recommendationsDiv.innerHTML = '<div class="alert alert-info">No course recommendations available for the missing skills.</div>';
     }

@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import JobMarket, CourseRecommendation
+from .models import JobMarket, CourseRecommendation, SavedJob
 from .services import JobFetcher, MentorFinder, CourseRecommender
 from .serializers import JobMarketSerializer
 from django.views.decorators.csrf import csrf_exempt
@@ -15,6 +15,7 @@ import google.generativeai as genai
 from django.conf import settings
 from django.contrib import messages
 import re
+from django.contrib.auth.decorators import login_required
 
 # Configure Gemini
 genai.configure(api_key=settings.GEMINI_API_KEY)
@@ -23,6 +24,10 @@ def index(request):
     return render(request, 'index.html')
 
 def skills_analysis(request):
+    # Test the API key first
+    is_valid, message = test_gemini_api()
+    if not is_valid:
+        messages.error(request, f"Gemini API Error: {message}")
     return render(request, 'skills_analysis.html')
 
 def get_course_recommendations(missing_skills, target_job_title=None):
@@ -291,34 +296,31 @@ def resume_upload(request):
             # Get the top match
             best_match = results[0] if results else None
             
-            # Initialize course recommender
-            course_recommender = CourseRecommender()
-            
             # Get course recommendations for missing skills
             course_recommendations = {}
-            learning_paths = {}
             if best_match and best_match['missing_skills']:
                 # Get recommendations with current skills context
-                recommendations = course_recommender.get_recommendations_for_missing_skills(
-                    missing_skills=best_match['missing_skills'],
-                    current_skills=found_skills,
-                    target_job=best_match['title']
+                recommendations = get_course_recommendations(
+                    best_match['missing_skills'],
+                    best_match['title']
                 )
                 
                 if 'error' not in recommendations:
-                    course_recommendations = recommendations.get('recommendations', {})
-                    learning_paths = recommendations.get('learning_path', {})
+                    course_recommendations = recommendations.get('course_recommendations', {})
                     
-                    # Get prerequisites for each missing skill
-                    skill_prerequisites = {}
-                    for skill in best_match['missing_skills']:
-                        prerequisites = course_recommender.get_skill_prerequisites(skill)
-                        if prerequisites:
-                            skill_prerequisites[skill] = prerequisites
+                    # Add potential job matches after completing courses
+                    potential_matches = []
+                    for result in results:
+                        # Check if completing the courses would qualify for this job
+                        if all(skill in best_match['missing_skills'] for skill in result['missing_skills']):
+                            potential_matches.append({
+                                'title': result['title'],
+                                'current_match': result['match_percentage'],
+                                'potential_match': 100
+                            })
                     
-                    # Add prerequisites to the response
-                    if skill_prerequisites:
-                        course_recommendations['skill_prerequisites'] = skill_prerequisites
+                    if potential_matches:
+                        course_recommendations['potential_job_matches'] = potential_matches
             
             # Fetch live job listings that match the user's skills
             live_jobs = []
@@ -351,8 +353,7 @@ def resume_upload(request):
                 'extracted_skills': found_skills,
                 'skill_locations': skill_locations,
                 'live_jobs': live_jobs,
-                'course_recommendations': course_recommendations,
-                'learning_paths': learning_paths
+                'course_recommendations': course_recommendations
             }
             
             return JsonResponse(response_data)
@@ -862,30 +863,32 @@ def trending_courses(request):
 
     return render(request, 'trending_courses.html', {'courses': {}})
 
-def test_gemini_api(request):
+def test_gemini_api():
     """
-    Test view to verify Gemini API functionality
+    Test function to verify if the Gemini API key is valid
+    Returns a tuple of (is_valid: bool, message: str)
     """
     try:
+        # Configure Gemini
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        
+        # Create a simple model instance
         model = genai.GenerativeModel('gemini-1.5-pro')
-        response = model.generate_content("Please respond with a simple 'Hello, I am working!' if you can receive this message.")
+        
+        # Try a simple generation
+        response = model.generate_content("Hello, this is a test message to verify API key.")
         
         if response and response.text:
-            return JsonResponse({
-                'status': 'success',
-                'message': 'Gemini API is working',
-                'response': response.text
-            })
+            return True, "API key is valid and working correctly."
         else:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Received empty response from Gemini API'
-            })
+            return False, "API key seems valid but received empty response."
+            
     except Exception as e:
-        return JsonResponse({
-            'status': 'error',
-            'message': f'Gemini API error: {str(e)}'
-        })
+        error_message = str(e)
+        if "API key not found" in error_message or "invalid api key" in error_message.lower():
+            return False, f"Invalid API key: {error_message}"
+        else:
+            return False, f"Error testing API key: {error_message}"
 
 def test_resume_analysis(request):
     """
@@ -1005,4 +1008,71 @@ def test_skill_extraction(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
             
-    return JsonResponse({'error': 'Method not allowed'}, status=405) 
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+@login_required
+def save_job(request):
+    """
+    View for saving/unsaving a job.
+    Handles both saving and removing jobs from the user's profile.
+    """
+    if request.method == 'POST':
+        try:
+            job_data = json.loads(request.body)
+            
+            # Get or create profile
+            profile = request.user.profile
+            
+            # Check if job exists by URL
+            job_url = job_data.get('url', '')
+            job_exists = any(job.get('url') == job_url for job in profile.get_saved_jobs())
+            
+            if job_exists:
+                # If job exists, remove it (unsave)
+                success = profile.remove_job(job_url)
+                if success:
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': 'Job removed from saved jobs',
+                        'action': 'unsaved'
+                    })
+                else:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Failed to remove job'
+                    })
+            else:
+                # If job doesn't exist, save it
+                success = profile.save_job(job_data)
+                if success:
+                    return JsonResponse({
+                        'status': 'success',
+                        'message': 'Job saved successfully',
+                        'action': 'saved'
+                    })
+                else:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Job already saved'
+                    })
+                
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid JSON data'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            })
+    
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Invalid request method'
+    })
+
+@login_required
+def saved_jobs(request):
+    saved_jobs = SavedJob.objects.filter(user=request.user).order_by('-saved_at')
+    return render(request, 'jobs/saved_jobs.html', {'saved_jobs': saved_jobs}) 
