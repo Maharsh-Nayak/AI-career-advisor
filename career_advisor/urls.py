@@ -5,8 +5,8 @@ from careerpath.views import landing_page
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', home, name='home'),
-    path('landing/', landing_page, name='landing'),
+    path('', landing_page, name='landing'),
+    path('home/', home, name='home'),
     path('', include('jobs.urls')),
     path('', include('frontend.urls')),
     path('users/', include('users.urls')),

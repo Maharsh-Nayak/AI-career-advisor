@@ -2,8 +2,8 @@ from django.shortcuts import render, redirect
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import JobMarket
-from .services import JobFetcher, MentorFinder
+from .models import JobMarket, CourseRecommendation
+from .services import JobFetcher, MentorFinder, CourseRecommender
 from .serializers import JobMarketSerializer
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
@@ -14,6 +14,7 @@ import io
 import google.generativeai as genai
 from django.conf import settings
 from django.contrib import messages
+import re
 
 # Configure Gemini
 genai.configure(api_key=settings.GEMINI_API_KEY)
@@ -29,6 +30,12 @@ def get_course_recommendations(missing_skills, target_job_title=None):
     Uses the Gemini API to get course recommendations for missing skills.
     """
     model = genai.GenerativeModel('gemini-1.5-pro')  # Using the latest model
+
+    # First verify API key is configured
+    if not settings.GEMINI_API_KEY or settings.GEMINI_API_KEY == 'AIzaSyCphmUSSXd-TpUbu2q2pBJTV9bsV1wmM4Q':
+        error_msg = "Gemini API key is not properly configured. Please set up a valid API key in your .env file."
+        print(error_msg)
+        return {"error": error_msg}
 
     prompt_template = """
 **Role:** You are an AI Career Advisor Assistant specializing in identifying relevant online learning resources.
@@ -80,6 +87,11 @@ target_job_title: "{target_job_title_str}"
         # Send the request to Gemini
         response = model.generate_content(filled_prompt)
         
+        if not response or not response.text:
+            error_msg = "Received empty response from Gemini API"
+            print(error_msg)
+            return {"error": error_msg}
+            
         # Extract the JSON part (Gemini might add backticks or 'json')
         raw_text = response.text.strip()
         if "```json" in raw_text:
@@ -87,14 +99,20 @@ target_job_title: "{target_job_title_str}"
         elif "```" in raw_text:
             raw_text = raw_text.split("```")[1].strip()
         
-        # Parse the JSON response
-        recommendations = json.loads(raw_text)
-        return recommendations
+        try:
+            # Parse the JSON response
+            recommendations = json.loads(raw_text)
+            return recommendations
+        except json.JSONDecodeError as e:
+            error_msg = f"Failed to parse Gemini API response as JSON: {str(e)}"
+            print(error_msg)
+            print("Raw response:", raw_text)
+            return {"error": error_msg}
 
     except Exception as e:
-        print(f"Error calling Gemini API for course recommendations: {e}")
-        # Return an empty structure on error
-        return {"course_recommendations": {skill: [] for skill in missing_skills}}
+        error_msg = f"Error calling Gemini API for course recommendations: {str(e)}"
+        print(error_msg)
+        return {"error": error_msg}
 
 def resume_upload(request):
     if request.method == 'GET':
@@ -114,14 +132,25 @@ def resume_upload(request):
             
             # Extract text based on file type
             text = ''
-            if file_extension == 'pdf':
-                reader = PyPDF2.PdfReader(resume_file)
-                for page in reader.pages:
-                    text += page.extract_text()
-            elif file_extension == 'docx':
-                doc = docx.Document(resume_file)
-                for para in doc.paragraphs:
-                    text += para.text + '\n'
+            try:
+                if file_extension == 'pdf':
+                    reader = PyPDF2.PdfReader(resume_file)
+                    for page in reader.pages:
+                        text += page.extract_text()
+                elif file_extension == 'docx':
+                    doc = docx.Document(resume_file)
+                    for para in doc.paragraphs:
+                        text += para.text + '\n'
+                
+                if not text.strip():
+                    return JsonResponse({'error': 'Could not extract text from the uploaded file'}, status=400)
+                    
+            except Exception as e:
+                print(f"Error extracting text from file: {str(e)}")
+                return JsonResponse({'error': 'Error reading the uploaded file. Please ensure it is not corrupted.'}, status=400)
+            
+            # Print the extracted text for debugging
+            print("Extracted text from resume:", text[:500])  # Print first 500 chars
             
             # Define a set of common technical skills to look for
             technical_skills = {
@@ -139,68 +168,200 @@ def resume_upload(request):
             # Extract technical skills from resume text
             text = text.lower()
             found_skills = []
+            skill_locations = {}  # Store where each skill was found
             
-            # Look for technical skills in the text
+            # Improved skill detection with location tracking
             for skill in technical_skills:
-                if skill in text:
+                skill_pattern = r'\b' + re.escape(skill.lower()) + r'\b'
+                matches = list(re.finditer(skill_pattern, text))
+                if matches:
                     found_skills.append(skill)
+                    skill_locations[skill] = [(m.start(), m.end()) for m in matches]
+            
+            # Additional common variations of skills
+            skill_variations = {
+                'js': 'javascript',
+                'node': 'node.js',
+                'react.js': 'react',
+                'vue.js': 'vue',
+                'postgres': 'postgresql',
+                'ml': 'machine learning',
+                'ai': 'artificial intelligence',
+                'cv': 'computer vision'
+            }
+            
+            # Check for skill variations
+            for variation, main_skill in skill_variations.items():
+                variation_pattern = r'\b' + re.escape(variation.lower()) + r'\b'
+                matches = list(re.finditer(variation_pattern, text))
+                if matches and main_skill not in found_skills:
+                    found_skills.append(main_skill)
+                    skill_locations[f"{main_skill} (as '{variation}')"] = [(m.start(), m.end()) for m in matches]
             
             # Remove duplicates and sort
             found_skills = sorted(list(set(found_skills)))
             
-            # Use existing job analysis logic
-            job_markets = JobMarket.objects.all()
-            results = []
+            print("Final found skills:", found_skills)  # Debug print
             
+            # Get job market data and ensure we have some data
+            job_markets = JobMarket.objects.all()
+            if not job_markets.exists():
+                # Create default job markets if none exist
+                default_jobs = [
+                    {
+                        'title': 'Full Stack Developer',
+                        'required_skills': ['python', 'javascript', 'html', 'css', 'react', 'django']
+                    },
+                    {
+                        'title': 'Data Scientist',
+                        'required_skills': ['python', 'machine learning', 'data science', 'sql']
+                    },
+                    {
+                        'title': 'DevOps Engineer',
+                        'required_skills': ['docker', 'kubernetes', 'aws', 'ci/cd', 'terraform']
+                    },
+                    {
+                        'title': 'Frontend Developer',
+                        'required_skills': ['html', 'css', 'javascript', 'react', 'typescript']
+                    },
+                    {
+                        'title': 'Backend Developer',
+                        'required_skills': ['python', 'django', 'postgresql', 'api development', 'docker']
+                    },
+                    {
+                        'title': 'Machine Learning Engineer',
+                        'required_skills': ['python', 'machine learning', 'deep learning', 'tensorflow', 'pytorch']
+                    }
+                ]
+                
+                for job in default_jobs:
+                    JobMarket.objects.create(
+                        title=job['title'],
+                        required_skills=job['required_skills']
+                    )
+                
+                job_markets = JobMarket.objects.all()
+            
+            results = []
             for job_market in job_markets:
                 required_skills = job_market.required_skills
+                
+                # Calculate matching and missing skills
                 matching_skills = [skill for skill in found_skills if skill in required_skills]
                 missing_skills = [skill for skill in required_skills if skill not in found_skills]
+                extra_skills = [skill for skill in found_skills if skill not in required_skills]
                 
+                # Calculate match metrics
                 num_matching = len(matching_skills)
                 num_required = len(required_skills)
-                match_percentage = int((num_matching / num_required) * 100) if num_required > 0 else 0
+                num_extra = len(extra_skills)
                 
-                results.append({
+                # Calculate different percentages
+                match_percentage = int((num_matching / num_required) * 100) if num_required > 0 else 0
+                completeness_score = int((num_matching / (num_matching + len(missing_skills))) * 100) if (num_matching + len(missing_skills)) > 0 else 0
+                
+                # Calculate relevance score (considers both matches and extras)
+                relevance_score = (match_percentage * 0.7) + (completeness_score * 0.3)
+                
+                job_result = {
                     'title': job_market.title,
-                    'percentage': match_percentage,
-                    'matching': matching_skills,
-                    'missing': missing_skills
-                })
+                    'match_percentage': match_percentage,
+                    'completeness_score': completeness_score,
+                    'relevance_score': round(relevance_score, 2),
+                    'matching_skills': matching_skills,
+                    'missing_skills': missing_skills,
+                    'extra_skills': extra_skills,
+                    'required_skills': required_skills,
+                    'analysis': {
+                        'total_required': num_required,
+                        'total_matching': num_matching,
+                        'total_missing': len(missing_skills),
+                        'total_extra': num_extra
+                    }
+                }
+                
+                results.append(job_result)
             
-            # Sort results by match percentage
-            results.sort(key=lambda x: x['percentage'], reverse=True)
+            # Sort results by relevance score (primary) and match percentage (secondary)
+            results.sort(key=lambda x: (x['relevance_score'], x['match_percentage']), reverse=True)
             
             # Filter out results with 0% match
-            results = [result for result in results if result['percentage'] > 0]
+            results = [result for result in results if result['match_percentage'] > 0]
             
-            # Get the best match result
+            # Get the top match
             best_match = results[0] if results else None
             
-            # Get course recommendations for missing skills if there's a match
+            # Initialize course recommender
+            course_recommender = CourseRecommender()
+            
+            # Get course recommendations for missing skills
             course_recommendations = {}
-            if best_match and best_match['missing']:
-                # Get recommendations from Gemini API
-                recommendations = get_course_recommendations(
-                    best_match['missing'],
-                    best_match['title']
+            learning_paths = {}
+            if best_match and best_match['missing_skills']:
+                # Get recommendations with current skills context
+                recommendations = course_recommender.get_recommendations_for_missing_skills(
+                    missing_skills=best_match['missing_skills'],
+                    current_skills=found_skills,
+                    target_job=best_match['title']
                 )
-                course_recommendations = recommendations.get('course_recommendations', {})
+                
+                if 'error' not in recommendations:
+                    course_recommendations = recommendations.get('recommendations', {})
+                    learning_paths = recommendations.get('learning_path', {})
+                    
+                    # Get prerequisites for each missing skill
+                    skill_prerequisites = {}
+                    for skill in best_match['missing_skills']:
+                        prerequisites = course_recommender.get_skill_prerequisites(skill)
+                        if prerequisites:
+                            skill_prerequisites[skill] = prerequisites
+                    
+                    # Add prerequisites to the response
+                    if skill_prerequisites:
+                        course_recommendations['skill_prerequisites'] = skill_prerequisites
             
-            # Fetch live jobs using extracted skills for better matching
-            # Use most relevant skills for job search
-            search_keyword = best_match['title'] if best_match else "software"
-            live_jobs = JobFetcher.fetch_all_jobs(search_keyword, found_skills)
+            # Fetch live job listings that match the user's skills
+            live_jobs = []
+            if best_match:
+                # Use both matching skills and job title for better results
+                search_terms = [best_match['title']] + best_match['matching_skills']
+                for term in search_terms:
+                    jobs = JobFetcher.fetch_all_jobs(term, best_match['matching_skills'])
+                    live_jobs.extend(jobs)
+                
+                # Remove duplicates while preserving order
+                seen = set()
+                unique_jobs = []
+                for job in live_jobs:
+                    job_key = (job.get('title', ''), job.get('company', ''))
+                    if job_key not in seen:
+                        seen.add(job_key)
+                        unique_jobs.append(job)
+                
+                live_jobs = unique_jobs[:10]  # Limit to top 10 most relevant jobs
             
-            return JsonResponse({
+            response_data = {
+                'status': 'success',
+                'analysis': {
+                    'results': results,
+                    'best_match': best_match,
+                    'total_matches': len(results),
+                    'skills_analyzed': len(found_skills)
+                },
                 'extracted_skills': found_skills,
-                'analysis': results,
+                'skill_locations': skill_locations,
                 'live_jobs': live_jobs,
-                'course_recommendations': course_recommendations
-            })
+                'course_recommendations': course_recommendations,
+                'learning_paths': learning_paths
+            }
+            
+            return JsonResponse(response_data)
             
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            print(f"Error processing resume: {str(e)}")  # Log the error
+            return JsonResponse({
+                'error': 'An error occurred while processing your resume. Please try again.'
+            }, status=500)
     
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
@@ -208,73 +369,169 @@ def resume_upload(request):
 def job_analysis(request):
     if request.method == 'POST':
         try:
+            # Get skills from request and clean them
             skills = request.POST.get('skills', '').split('\n')
             skills = [skill.strip().lower() for skill in skills if skill.strip()]
             
             if not skills:
                 return JsonResponse({'error': 'No skills provided'}, status=400)
             
-            # Get job market data
-            job_markets = JobMarket.objects.all()
-            results = []
+            print("Analyzing skills:", skills)  # Debug print
             
+            # Get job market data and ensure we have some data
+            job_markets = JobMarket.objects.all()
+            if not job_markets.exists():
+                # Create default job markets if none exist
+                default_jobs = [
+                    {
+                        'title': 'Full Stack Developer',
+                        'required_skills': ['python', 'javascript', 'html', 'css', 'react', 'django']
+                    },
+                    {
+                        'title': 'Data Scientist',
+                        'required_skills': ['python', 'machine learning', 'data science', 'sql']
+                    },
+                    {
+                        'title': 'DevOps Engineer',
+                        'required_skills': ['docker', 'kubernetes', 'aws', 'ci/cd', 'terraform']
+                    },
+                    {
+                        'title': 'Frontend Developer',
+                        'required_skills': ['html', 'css', 'javascript', 'react', 'typescript']
+                    },
+                    {
+                        'title': 'Backend Developer',
+                        'required_skills': ['python', 'django', 'postgresql', 'api development', 'docker']
+                    },
+                    {
+                        'title': 'Machine Learning Engineer',
+                        'required_skills': ['python', 'machine learning', 'deep learning', 'tensorflow', 'pytorch']
+                    }
+                ]
+                
+                for job in default_jobs:
+                    JobMarket.objects.create(
+                        title=job['title'],
+                        required_skills=job['required_skills']
+                    )
+                
+                job_markets = JobMarket.objects.all()
+            
+            results = []
             for job_market in job_markets:
                 required_skills = job_market.required_skills
+                
+                # Calculate matching and missing skills
                 matching_skills = [skill for skill in skills if skill in required_skills]
                 missing_skills = [skill for skill in required_skills if skill not in skills]
+                extra_skills = [skill for skill in skills if skill not in required_skills]
                 
+                # Calculate match metrics
                 num_matching = len(matching_skills)
                 num_required = len(required_skills)
-                match_percentage = int((num_matching / num_required) * 100) if num_required > 0 else 0
+                num_extra = len(extra_skills)
                 
-                results.append({
+                # Calculate different percentages
+                match_percentage = int((num_matching / num_required) * 100) if num_required > 0 else 0
+                completeness_score = int((num_matching / (num_matching + len(missing_skills))) * 100) if (num_matching + len(missing_skills)) > 0 else 0
+                
+                # Calculate relevance score (considers both matches and extras)
+                relevance_score = (match_percentage * 0.7) + (completeness_score * 0.3)
+                
+                job_result = {
                     'title': job_market.title,
-                    'percentage': match_percentage,
-                    'matching': matching_skills,
-                    'missing': missing_skills
-                })
+                    'match_percentage': match_percentage,
+                    'completeness_score': completeness_score,
+                    'relevance_score': round(relevance_score, 2),
+                    'matching_skills': matching_skills,
+                    'missing_skills': missing_skills,
+                    'extra_skills': extra_skills,
+                    'required_skills': required_skills,
+                    'analysis': {
+                        'total_required': num_required,
+                        'total_matching': num_matching,
+                        'total_missing': len(missing_skills),
+                        'total_extra': num_extra
+                    }
+                }
+                
+                results.append(job_result)
             
-            # Sort results by match percentage
-            results.sort(key=lambda x: x['percentage'], reverse=True)
+            # Sort results by relevance score (primary) and match percentage (secondary)
+            results.sort(key=lambda x: (x['relevance_score'], x['match_percentage']), reverse=True)
             
             # Filter out results with 0% match
-            results = [result for result in results if result['percentage'] > 0]
+            results = [result for result in results if result['match_percentage'] > 0]
             
-            # Get the best match result
+            # Get the top match
             best_match = results[0] if results else None
             
-            # Get course recommendations for missing skills if there's a match
+            # Get course recommendations for missing skills
             course_recommendations = {}
-            if best_match and best_match['missing']:
-                # Get recommendations from Gemini API
+            if best_match and best_match['missing_skills']:
                 recommendations = get_course_recommendations(
-                    best_match['missing'],
+                    best_match['missing_skills'],
                     best_match['title']
                 )
-                course_recommendations = recommendations.get('course_recommendations', {})
                 
-                # Add information about which jobs would match if they completed all courses
-                potential_matches = []
-                for result in results:
-                    if all(skill in best_match['missing'] for skill in result['missing']):
-                        potential_matches.append(result['title'])
-                        
-                if potential_matches:
-                    course_recommendations['potential_job_matches'] = potential_matches
+                if 'error' not in recommendations:
+                    course_recommendations = recommendations.get('course_recommendations', {})
+                    
+                    # Add potential job matches after completing courses
+                    potential_matches = []
+                    for result in results:
+                        # Check if completing the courses would qualify for this job
+                        if all(skill in best_match['missing_skills'] for skill in result['missing_skills']):
+                            potential_matches.append({
+                                'title': result['title'],
+                                'current_match': result['match_percentage'],
+                                'potential_match': 100
+                            })
+                    
+                    if potential_matches:
+                        course_recommendations['potential_job_matches'] = potential_matches
             
-            # Fetch live jobs using input skills for better matching
-            # Use the job title that matched best with the user's skills
-            search_keyword = best_match['title'] if best_match else skills[0]
-            live_jobs = JobFetcher.fetch_all_jobs(search_keyword, skills)
+            # Fetch live job listings that match the user's skills
+            live_jobs = []
+            if best_match:
+                # Use both matching skills and job title for better results
+                search_terms = [best_match['title']] + best_match['matching_skills']
+                for term in search_terms:
+                    jobs = JobFetcher.fetch_all_jobs(term, best_match['matching_skills'])
+                    live_jobs.extend(jobs)
+                
+                # Remove duplicates while preserving order
+                seen = set()
+                unique_jobs = []
+                for job in live_jobs:
+                    job_key = (job.get('title', ''), job.get('company', ''))
+                    if job_key not in seen:
+                        seen.add(job_key)
+                        unique_jobs.append(job)
+                
+                live_jobs = unique_jobs[:10]  # Limit to top 10 most relevant jobs
             
-            return JsonResponse({
-                'analysis': results,
+            response_data = {
+                'status': 'success',
+                'analysis': {
+                    'results': results,
+                    'best_match': best_match,
+                    'total_matches': len(results),
+                    'skills_analyzed': len(skills)
+                },
                 'live_jobs': live_jobs,
                 'course_recommendations': course_recommendations
-            })
+            }
+            
+            return JsonResponse(response_data)
             
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            print(f"Error in job analysis: {str(e)}")  # Debug print
+            return JsonResponse({
+                'status': 'error',
+                'error': str(e),
+                'message': 'An error occurred while analyzing skills'
+            }, status=500)
     
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
@@ -529,4 +786,223 @@ def recommended_jobs(request):
     """View for displaying personalized job recommendations"""
     # This view will primarily use JavaScript to fetch recommended jobs
     # based on the user's profile skills
-    return render(request, 'jobs/recommended_jobs.html') 
+    return render(request, 'jobs/recommended_jobs.html')
+
+def get_trending_courses():
+    """
+    Uses the Gemini API to get trending course recommendations.
+    """
+    model = genai.GenerativeModel('gemini-1.5-pro')
+
+    prompt_template = """
+**Role:** You are an AI Career Advisor Assistant specializing in identifying relevant online learning resources.
+
+**Task:** Your primary goal is to recommend specific, high-quality trending online courses from reputable platforms (like Coursera, Udemy, edX, LinkedIn Learning, etc.) for the most in-demand tech skills in 2024.
+
+**Output Requirements:**
+* Provide your response as a single, valid JSON object.
+* The main key of this object should be `trending_courses`.
+* Group courses by skill categories (e.g., 'AI/ML', 'Web Development', 'Cloud Computing', 'Data Science', 'Cybersecurity').
+* For each category, provide EXACTLY 3 trending courses.
+* Each course object must have:
+    * `course_title`: The official title of the course (string)
+    * `platform`: The name of the platform hosting the course (string)
+    * `url`: The direct URL link to the course page (string)
+    * `level`: The difficulty level (string)
+    * `description`: A brief, one-sentence description
+    * `popularity_reason`: Why this course is trending (string)
+
+Please provide trending courses that are currently popular in 2024.
+"""
+
+    try:
+        response = model.generate_content(prompt_template)
+        
+        if not response or not response.text:
+            error_msg = "Received empty response from Gemini API"
+            print(error_msg)
+            return {"error": error_msg}
+            
+        raw_text = response.text.strip()
+        if "```json" in raw_text:
+            raw_text = raw_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in raw_text:
+            raw_text = raw_text.split("```")[1].strip()
+        
+        try:
+            recommendations = json.loads(raw_text)
+            return recommendations
+        except json.JSONDecodeError as e:
+            error_msg = f"Failed to parse Gemini API response as JSON: {str(e)}"
+            print(error_msg)
+            return {"error": error_msg}
+
+    except Exception as e:
+        error_msg = f"Error calling Gemini API for trending courses: {str(e)}"
+        print(error_msg)
+        return {"error": error_msg}
+
+def trending_courses(request):
+    """
+    View to display trending courses across different tech categories.
+    """
+    if request.method == 'GET':
+        trending_recommendations = get_trending_courses()
+        
+        if 'error' in trending_recommendations:
+            messages.error(request, trending_recommendations['error'])
+            return render(request, 'trending_courses.html', {
+                'courses': {},
+                'error': trending_recommendations['error']
+            })
+            
+        return render(request, 'trending_courses.html', {
+            'courses': trending_recommendations.get('trending_courses', {})
+        })
+
+    return render(request, 'trending_courses.html', {'courses': {}})
+
+def test_gemini_api(request):
+    """
+    Test view to verify Gemini API functionality
+    """
+    try:
+        model = genai.GenerativeModel('gemini-1.5-pro')
+        response = model.generate_content("Please respond with a simple 'Hello, I am working!' if you can receive this message.")
+        
+        if response and response.text:
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Gemini API is working',
+                'response': response.text
+            })
+        else:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Received empty response from Gemini API'
+            })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Gemini API error: {str(e)}'
+        })
+
+def test_resume_analysis(request):
+    """
+    Test endpoint to verify each component of resume analysis
+    """
+    test_results = {
+        'components': {
+            'file_processing': {
+                'pdf_support': 'PyPDF2' in globals(),
+                'docx_support': 'docx' in globals()
+            },
+            'ai_integration': {
+                'gemini_configured': bool(settings.GEMINI_API_KEY),
+                'gemini_key_valid': settings.GEMINI_API_KEY != 'AIzaSyCphmUSSXd-TpUbu2q2pBJTV9bsV1wmM4Q'
+            },
+            'database': {
+                'job_markets_count': JobMarket.objects.count(),
+                'sample_job_titles': list(JobMarket.objects.values_list('title', flat=True))
+            },
+            'skill_detection': {
+                'total_skills_monitored': len(technical_skills),
+                'sample_skills': list(technical_skills)[:10]
+            }
+        },
+        'status': 'operational'
+    }
+    
+    # Test Gemini API
+    try:
+        model = genai.GenerativeModel('gemini-1.5-pro')
+        response = model.generate_content("Test connection")
+        test_results['components']['ai_integration']['gemini_test_response'] = 'success'
+    except Exception as e:
+        test_results['components']['ai_integration']['gemini_test_response'] = f'error: {str(e)}'
+        test_results['status'] = 'partial'
+    
+    # Overall status check
+    if not test_results['components']['database']['job_markets_count']:
+        test_results['status'] = 'error'
+        test_results['error'] = 'No job markets found in database'
+    elif not test_results['components']['ai_integration']['gemini_key_valid']:
+        test_results['status'] = 'error'
+        test_results['error'] = 'Invalid Gemini API key'
+    
+    return JsonResponse(test_results)
+
+def test_skill_extraction(request):
+    """
+    Test endpoint to verify skill extraction from sample text
+    """
+    if request.method == 'POST':
+        try:
+            # Get the text from the request
+            text = request.POST.get('text', '')
+            if not text:
+                return JsonResponse({'error': 'No text provided'}, status=400)
+
+            # Convert to lowercase for case-insensitive matching
+            text = text.lower()
+            
+            # Define technical skills (same as in resume_upload)
+            technical_skills = {
+                'python', 'java', 'javascript', 'typescript', 'c++', 'go', 'ruby', 'php',
+                'html', 'css', 'sql', 'nosql', 'mongodb', 'mysql', 'postgresql', 'oracle',
+                'react', 'angular', 'vue', 'node.js', 'express', 'django', 'flask', 'spring',
+                'docker', 'kubernetes', 'aws', 'azure', 'gcp', 'terraform',
+                'git', 'ci/cd', 'jenkins', 'github actions', 'gitlab ci',
+                'machine learning', 'deep learning', 'data science', 'artificial intelligence',
+                'nlp', 'computer vision', 'tensorflow', 'pytorch', 'keras',
+                'algorithms', 'blockchain', 'cybersecurity', 'networking',
+                'system design', 'agile', 'scrum', 'kanban'
+            }
+            
+            found_skills = []
+            skill_locations = {}  # To store where each skill was found
+            
+            # Look for skills with word boundaries
+            for skill in technical_skills:
+                skill_pattern = r'\b' + re.escape(skill.lower()) + r'\b'
+                matches = list(re.finditer(skill_pattern, text))
+                if matches:
+                    found_skills.append(skill)
+                    # Store the character positions where this skill was found
+                    skill_locations[skill] = [(m.start(), m.end()) for m in matches]
+            
+            # Check for skill variations
+            skill_variations = {
+                'js': 'javascript',
+                'node': 'node.js',
+                'react.js': 'react',
+                'vue.js': 'vue',
+                'postgres': 'postgresql',
+                'ml': 'machine learning',
+                'ai': 'artificial intelligence',
+                'cv': 'computer vision'
+            }
+            
+            for variation, main_skill in skill_variations.items():
+                if main_skill not in found_skills:  # Only check if main skill wasn't found
+                    variation_pattern = r'\b' + re.escape(variation.lower()) + r'\b'
+                    matches = list(re.finditer(variation_pattern, text))
+                    if matches:
+                        found_skills.append(main_skill)
+                        # Store the character positions where this variation was found
+                        skill_locations[f"{main_skill} (as '{variation}')"] = [(m.start(), m.end()) for m in matches]
+            
+            # Sort and remove duplicates
+            found_skills = sorted(list(set(found_skills)))
+            
+            return JsonResponse({
+                'found_skills': found_skills,
+                'skill_locations': skill_locations,
+                'text_analyzed': text[:1000],  # Return first 1000 chars of analyzed text
+                'total_skills_found': len(found_skills)
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+            
+    return JsonResponse({'error': 'Method not allowed'}, status=405) 

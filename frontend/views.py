@@ -7,7 +7,10 @@ import requests
 from jobs.utils import extract_keywords, match_suggestions, generate_linkedin_search_url, generate_linkedin_profiles_with_gemini
 
 def home(request):
-    return render(request, 'index.html')
+    if request.user.is_authenticated:
+        return render(request, 'index.html')
+    else:
+        return redirect('landing')
 
 @csrf_exempt
 def networking_analysis(request):

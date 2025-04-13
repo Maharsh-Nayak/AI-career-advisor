@@ -282,16 +282,42 @@ document.addEventListener('DOMContentLoaded', function() {
     analyzeBtn.addEventListener('click', function() {
         const formData = new FormData(resumeForm);
         
+        // Validate file
+        const file = resumeFileInput.files[0];
+        if (!file) {
+            alert('Please select a file first');
+            return;
+        }
+        
+        // Validate file type
+        const fileType = file.name.split('.').pop().toLowerCase();
+        if (!['pdf', 'docx'].includes(fileType)) {
+            alert('Only PDF and DOCX files are supported');
+            return;
+        }
+        
         initialState.classList.add('d-none');
         loading.classList.remove('d-none');
         results.classList.add('d-none');
         
+        console.log('Uploading file:', file.name); // Debug log
+        
         fetch('{% url "jobs:resume_upload" %}', {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status); // Debug log
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Response data:', data); // Debug log
             loading.classList.add('d-none');
             resultsPreview.classList.remove('d-none');
             

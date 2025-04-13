@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Trending Courses{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="text-center mb-5">Trending Tech Courses 2024</h1>
+    
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if courses %}
+        {% for category, category_courses in courses.items %}
+        <div class="mb-5">
+            <h2 class="mb-4">{{ category }}</h2>
+            <div class="row row-cols-1 row-cols-md-3 g-4">
+                {% for course in category_courses %}
+                <div class="col">
+                    <div class="card h-100 shadow-sm hover-card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ course.course_title }}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">{{ course.platform }}</h6>
+                            <p class="card-text">{{ course.description }}</p>
+                            <div class="mb-3">
+                                <span class="badge bg-primary">{{ course.level }}</span>
+                            </div>
+                            <p class="card-text"><small class="text-muted">
+                                <i class="fas fa-trending-up"></i> {{ course.popularity_reason }}
+                            </small></p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                            <a href="{{ course.url }}" target="_blank" class="btn btn-primary w-100">
+                                View Course
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center">
+            <p class="lead">Loading trending courses...</p>
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .hover-card {
+        transition: transform 0.2s ease-in-out;
+    }
+    .hover-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %} 

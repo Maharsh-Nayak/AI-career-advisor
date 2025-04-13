@@ -7,18 +7,30 @@
     <title>CareerPath AI - Your Career Journey Starts Here</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #4a90e2;
-            --secondary-color: #2c3e50;
-            --accent-color: #e74c3c;
+            --primary-color: #4f46e5;
+            --primary-dark: #4338ca;
+            --secondary-color: #0ea5e9;
+            --accent-color: #f97316;
+            --text-light: #94a3b8;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Poppins', sans-serif;
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            overflow-x: hidden;
         }
 
         .hero-section {
@@ -26,30 +38,41 @@
             display: flex;
             align-items: center;
             background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
-                        url('https://images.unsplash.com/photo-1521737604893-d14cc237f11d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
+                        url('https://images.unsplash.com/photo-1521737604893-d14cc237f11d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80') fixed;
             background-size: cover;
             background-position: center;
             color: white;
+            position: relative;
         }
 
         .hero-content {
             text-align: center;
             padding: 2rem;
+            position: relative;
+            z-index: 2;
         }
 
         .hero-title {
-            font-size: 3.5rem;
+            font-size: 4rem;
             font-weight: 700;
             margin-bottom: 1.5rem;
             animation: fadeInUp 1s ease;
+            background: linear-gradient(135deg, #fff, #e2e8f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .hero-subtitle {
             font-size: 1.5rem;
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
             animation: fadeInUp 1s ease 0.2s;
             opacity: 0;
             animation-fill-mode: forwards;
+            color: var(--text-light);
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .cta-buttons {
@@ -58,56 +81,180 @@
             animation-fill-mode: forwards;
         }
 
-        .btn-primary {
-            background-color: var(--primary-color);
-            border: none;
-            padding: 12px 30px;
+        .btn {
+            padding: 1rem 2.5rem;
             font-size: 1.1rem;
-            margin: 0 10px;
-            transition: transform 0.3s ease;
+            font-weight: 500;
+            border-radius: 50px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            margin: 0.5rem;
+            position: relative;
+            overflow: hidden;
         }
 
-        .btn-primary:hover {
-            transform: translateY(-3px);
-            background-color: #357abd;
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            border: none;
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
         }
 
         .btn-outline-light {
-            padding: 12px 30px;
-            font-size: 1.1rem;
-            margin: 0 10px;
-            transition: transform 0.3s ease;
+            border: 2px solid white;
+            background: transparent;
         }
 
-        .btn-outline-light:hover {
+        .btn:hover {
             transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
         }
 
         .features-section {
-            padding: 5rem 0;
-            background-color: white;
+            padding: 8rem 0;
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .features-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: linear-gradient(to bottom right, #fff 49.5%, transparent 50%);
         }
 
         .feature-card {
-            padding: 2rem;
-            text-align: center;
-            transition: transform 0.3s ease;
+            background: white;
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            opacity: 0;
+            z-index: -1;
+            transition: opacity 0.3s ease;
         }
 
         .feature-card:hover {
             transform: translateY(-10px);
+            box-shadow: var(--shadow-lg);
+            color: white;
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
         }
 
         .feature-icon {
-            font-size: 2.5rem;
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
             color: var(--primary-color);
+            transition: color 0.3s ease;
+        }
+
+        .feature-card:hover .feature-icon {
+            color: white;
+        }
+
+        .stats-section {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            padding: 6rem 0;
+            position: relative;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .stat-number {
+            font-size: 3.5rem;
+            font-weight: bold;
             margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff, #e2e8f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            letter-spacing: 1px;
+        }
+
+        .testimonials-section {
+            padding: 8rem 0;
+            background: #fff;
+            position: relative;
+        }
+
+        .testimonial-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: var(--shadow-md);
+            margin: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .testimonial-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .testimonial-text {
+            font-style: italic;
+            margin-bottom: 1.5rem;
+            color: #1e293b;
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+
+        .testimonial-author {
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 1.1rem;
         }
 
         @keyframes fadeInUp {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateY(30px);
             }
             to {
                 opacity: 1;
@@ -115,43 +262,25 @@
             }
         }
 
-        .stats-section {
-            background-color: var(--secondary-color);
-            color: white;
-            padding: 4rem 0;
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-number {
+        .section-title {
             font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--primary-color);
+            font-weight: 700;
+            margin-bottom: 3rem;
+            text-align: center;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .testimonials-section {
-            padding: 5rem 0;
-            background-color: #f8f9fa;
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
         }
 
-        .testimonial-card {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin: 1rem;
-        }
-
-        .testimonial-text {
-            font-style: italic;
-            margin-bottom: 1rem;
-        }
-
-        .testimonial-author {
-            font-weight: bold;
-            color: var(--primary-color);
+        .animate-on-scroll.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
     </style>
 </head>
@@ -173,24 +302,24 @@
     <!-- Features Section -->
     <section class="features-section">
         <div class="container">
-            <h2 class="text-center mb-5">Why Choose CareerPath AI?</h2>
+            <h2 class="section-title animate-on-scroll">Why Choose CareerPath AI?</h2>
             <div class="row">
                 <div class="col-md-4">
-                    <div class="feature-card">
+                    <div class="feature-card animate-on-scroll">
                         <i class="fas fa-robot feature-icon"></i>
                         <h3>AI-Powered Insights</h3>
                         <p>Get personalized career recommendations based on your skills and interests.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="feature-card">
+                    <div class="feature-card animate-on-scroll">
                         <i class="fas fa-chart-line feature-icon"></i>
                         <h3>Career Growth</h3>
                         <p>Track your progress and get guidance on career advancement opportunities.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="feature-card">
+                    <div class="feature-card animate-on-scroll">
                         <i class="fas fa-users feature-icon"></i>
                         <h3>Community Support</h3>
                         <p>Connect with professionals and mentors in your field of interest.</p>
@@ -205,19 +334,19 @@
         <div class="container">
             <div class="row">
                 <div class="col-md-4">
-                    <div class="stat-item">
+                    <div class="stat-item animate-on-scroll">
                         <div class="stat-number">10K+</div>
                         <div class="stat-label">Active Users</div>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="stat-item">
+                    <div class="stat-item animate-on-scroll">
                         <div class="stat-number">500+</div>
                         <div class="stat-label">Career Paths</div>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="stat-item">
+                    <div class="stat-item animate-on-scroll">
                         <div class="stat-number">95%</div>
                         <div class="stat-label">Success Rate</div>
                     </div>
@@ -229,22 +358,22 @@
     <!-- Testimonials Section -->
     <section class="testimonials-section">
         <div class="container">
-            <h2 class="text-center mb-5">What Our Users Say</h2>
+            <h2 class="section-title animate-on-scroll">What Our Users Say</h2>
             <div class="row">
                 <div class="col-md-4">
-                    <div class="testimonial-card">
+                    <div class="testimonial-card animate-on-scroll">
                         <p class="testimonial-text">"CareerPath AI helped me discover my true passion and guided me towards a fulfilling career in tech."</p>
                         <p class="testimonial-author">- Sarah Johnson, Software Engineer</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="testimonial-card">
+                    <div class="testimonial-card animate-on-scroll">
                         <p class="testimonial-text">"The AI-powered insights were incredibly accurate and helped me make informed career decisions."</p>
                         <p class="testimonial-author">- Michael Chen, Data Scientist</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="testimonial-card">
+                    <div class="testimonial-card animate-on-scroll">
                         <p class="testimonial-text">"Thanks to CareerPath AI, I found my dream job within months of using the platform."</p>
                         <p class="testimonial-author">- Emily Rodriguez, Marketing Manager</p>
                     </div>
@@ -254,5 +383,27 @@
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const animatedElements = document.querySelectorAll('.animate-on-scroll');
+            animatedElements.forEach(el => observer.observe(el));
+        });
+    </script>
 </body>
 </html> 

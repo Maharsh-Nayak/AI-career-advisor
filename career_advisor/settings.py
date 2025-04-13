@@ -126,8 +126,8 @@ ADZUNA_APP_KEY = os.environ.get('ADZUNA_APP_KEY', '')
 
 # Authentication
 LOGIN_URL = 'users:login'
-LOGIN_REDIRECT_URL = 'users:profile'
-LOGOUT_REDIRECT_URL = 'home'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'landing'
 
 # Email settings for password reset
 if DEBUG:

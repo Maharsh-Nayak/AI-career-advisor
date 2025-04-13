@@ -13,4 +13,8 @@ urlpatterns = [
     path('job-listings/<int:job_id>/', views.job_detail, name='job_detail'),
     path('search-jobs/', views.search_jobs, name='search_jobs'),
     path('recommended-jobs/', views.recommended_jobs, name='recommended_jobs'),
+    path('trending-courses/', views.trending_courses, name='trending_courses'),
+    path('test-gemini/', views.test_gemini_api, name='test_gemini'),
+    path('test-analysis/', views.test_resume_analysis, name='test_analysis'),
+    path('test-skill-extraction/', views.test_skill_extraction, name='test_skill_extraction'),
 ] 

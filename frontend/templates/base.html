@@ -7,146 +7,213 @@
     <title>{% block title %}Career Compass - Navigate Your Professional Journey{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #6366f1;
-            --bg-light: #f0f3ff;
-            --dark-blue: #0a192f;
+            --primary-color: #4f46e5;
+            --primary-dark: #4338ca;
+            --secondary-color: #0ea5e9;
+            --accent-color: #f97316;
+            --bg-light: #f8fafc;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
         }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: 'Poppins', sans-serif;
             background-color: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.6;
         }
+
+        /* Navbar Styles */
         .navbar {
-            padding-top: 0.5rem;
-            padding-bottom: 0.5rem;
-            background-color: var(--primary-color) !important;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)) !important;
+            padding: 1rem 0;
+            box-shadow: var(--shadow-md);
         }
+
         .navbar-brand {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 1rem;
             font-weight: 600;
-            color: #fff;
-            padding: 0;
+            color: white !important;
+            transition: transform 0.3s ease;
         }
+
+        .navbar-brand:hover {
+            transform: translateY(-2px);
+        }
+
         .logo-image {
-            height: 65px;
+            height: 50px;
             width: auto;
-            border-radius: 0;
-            object-fit: contain;
-            background-color: transparent;
-            mix-blend-mode: multiply;
-            padding: 2px;
+            border-radius: 10px;
+            box-shadow: var(--shadow-sm);
         }
+
         .logo-text {
             display: flex;
             flex-direction: column;
-            line-height: 1.1;
         }
+
         .logo-text .top {
-            font-size: 14px;
-            letter-spacing: 1px;
+            font-size: 0.9rem;
+            letter-spacing: 2px;
             opacity: 0.9;
         }
+
         .logo-text .bottom {
-            font-size: 16px;
+            font-size: 1.2rem;
             font-weight: 700;
+            letter-spacing: 1px;
         }
-        .navbar-logo {
-            color: var(--primary-color);
-            font-size: 24px;
-        }
-        .hero-section {
-            padding: 80px 20px;
-            text-align: center;
-            background-color: var(--bg-light);
-        }
-        .hero-title {
-            font-size: 2.8rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            color: #1a202c;
-        }
-        .hero-subtitle {
-            max-width: 800px;
-            margin: 0 auto 3rem;
-            color: #4a5568;
-            line-height: 1.6;
-        }
-        .feature-card {
-            background-color: #fff;
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            text-align: center;
-            transition: transform 0.3s;
-            height: 100%;
-        }
-        .feature-card:hover {
-            transform: translateY(-5px);
-        }
-        .feature-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            display: inline-block;
-        }
-        .bulb-icon {
-            color: #fbbf24;
-        }
-        .search-icon {
-            color: #3b82f6;
-        }
-        .handshake-icon {
-            color: #f59e0b;
-        }
-        .feature-title {
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: #1a202c;
-        }
-        .feature-description {
-            color: #4a5568;
-            margin-bottom: 1.5rem;
-        }
-        .btn-primary {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-            padding: 0.5rem 1.5rem;
-            border-radius: 0.5rem;
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
             font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
         }
-        .btn-primary:hover {
-            background-color: #5558e6;
-            border-color: #5558e6;
+
+        .nav-link:hover {
+            color: white !important;
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
         }
-        .section-title {
-            text-align: center;
-            margin-bottom: 3rem;
-            font-weight: 700;
-            color: #1a202c;
+
+        .dropdown-menu {
+            border: none;
+            box-shadow: var(--shadow-lg);
+            border-radius: 1rem;
+            padding: 1rem 0;
         }
+
+        .dropdown-item {
+            padding: 0.7rem 1.5rem;
+            font-weight: 500;
+            color: var(--text-dark);
+            transition: all 0.3s ease;
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--primary-color);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        /* Content Sections */
         .content-section {
-            padding: 80px 20px;
-            background-color: var(--bg-light);
+            padding: 5rem 0;
         }
+
         .page-card {
-            background-color: #fff;
-            border-radius: 12px;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: var(--shadow-md);
             padding: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
+
+        .page-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            border: none;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+        }
+
+        /* Footer */
+        .footer-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            padding: 3rem 0;
+            color: white;
+        }
+
         .footer-logo {
             height: 40px;
-            width: auto;
-            object-fit: contain;
-            background-color: transparent;
-            mix-blend-mode: multiply;
-            margin-right: 10px;
+            border-radius: 8px;
+            box-shadow: var(--shadow-sm);
         }
-        /* Add a class for the footer with the primary color */
-        .footer-primary {
-            background-color: var(--primary-color);
+
+        .social-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            margin: 0 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .social-links a:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.6s ease forwards;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-light);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -155,9 +222,9 @@
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             {% if user.is_authenticated %}
-                <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+                <a class="navbar-brand" href="{% url 'home' %}">
             {% else %}
-                <a class="navbar-brand d-flex align-items-center" href="{% url 'landing' %}">
+                <a class="navbar-brand" href="{% url 'landing' %}">
             {% endif %}
                 <img src="{% static 'images/logo1.jpg' %}" alt="Career Compass Logo" class="logo-image">
                 <div class="logo-text">
@@ -165,80 +232,98 @@
                     <span class="bottom">COMPASS</span>
                 </div>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            {% if user.is_authenticated %}
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        {% if user.is_authenticated %}
-                            <a class="nav-link" href="{% url 'home' %}">Home</a>
-                        {% else %}
-                            <a class="nav-link" href="{% url 'landing' %}">Home</a>
-                        {% endif %}
+                        <a class="nav-link" href="{% url 'home' %}">
+                            <i class="fas fa-home me-2"></i>Home
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'jobs:skills_analysis' %}">Skills Analysis</a>
+                        <a class="nav-link" href="{% url 'jobs:skills_analysis' %}">
+                            <i class="fas fa-chart-bar me-2"></i>Skills Analysis
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'jobs:resume_upload' %}">Resume Checker</a>
+                        <a class="nav-link" href="{% url 'jobs:resume_upload' %}">
+                            <i class="fas fa-file-alt me-2"></i>Resume Checker
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/networking-analysis/">Networking</a>
+                        <a class="nav-link" href="/networking-analysis/">
+                            <i class="fas fa-network-wired me-2"></i>Networking
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'jobs:job_listings' %}">Job Listings</a>
+                        <a class="nav-link" href="{% url 'jobs:job_listings' %}">
+                            <i class="fas fa-briefcase me-2"></i>Job Listings
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'jobs:recommended_jobs' %}">Recommended Jobs</a>
+                        <a class="nav-link" href="{% url 'jobs:recommended_jobs' %}">
+                            <i class="fas fa-star me-2"></i>Recommended
+                        </a>
                     </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
-                    {% if user.is_authenticated %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                {{ user.username }}
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                                <li><a class="dropdown-item" href="{% url 'users:profile' %}">My Profile</a></li>
-                                <li><a class="dropdown-item" href="{% url 'users:profile_update' %}">Edit Profile</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'users:logout' %}">Logout</a></li>
-                            </ul>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'users:login' %}">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'users:register' %}">Register</a>
-                        </li>
-                    {% endif %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-2"></i>{{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'users:profile' %}">
+                                    <i class="fas fa-user me-2"></i>My Profile
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'users:profile_update' %}">
+                                    <i class="fas fa-edit me-2"></i>Edit Profile
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'users:logout' %}">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
                 </ul>
             </div>
+            {% endif %}
         </div>
     </nav>
 
-    {% block content %}{% endblock %}
+    <main class="animate-fade-in">
+        {% block content %}{% endblock %}
+    </main>
 
-    <footer class="footer-primary text-white text-center py-4">
+    <footer class="footer-primary">
         <div class="container">
-            <div class="row">
-                <div class="col-md-4 mb-3 mb-md-0">
-                    <div class="d-flex align-items-center justify-content-center justify-content-md-start">
-                        <img src="{% static 'images/logo1.jpg' %}" alt="Career Compass Logo" class="footer-logo">
-                        <span class="fw-bold">Career Compass</span>
+            <div class="row align-items-center">
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <div class="d-flex align-items-center">
+                        <img src="{% static 'images/logo1.jpg' %}" alt="Career Compass Logo" class="footer-logo me-3">
+                        <div>
+                            <h5 class="mb-0 fw-bold">Career Compass</h5>
+                            <p class="mb-0 small">Guiding your professional journey</p>
+                        </div>
                     </div>
-                    <p class="small mt-2 mb-0">Guiding your professional journey</p>
                 </div>
-                <div class="col-md-4 mb-3 mb-md-0">
-                    <p class="mb-0">© 2025 Career Compass. All rights reserved.</p>
+                <div class="col-md-4 mb-4 mb-md-0 text-center">
+                    <p class="mb-0">&copy; {% now "Y" %} Career Compass. All rights reserved.</p>
                 </div>
                 <div class="col-md-4">
-                    <div class="d-flex justify-content-center justify-content-md-end">
-                        <a href="#" class="text-white mx-2"><i class="fab fa-linkedin"></i></a>
-                        <a href="#" class="text-white mx-2"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="text-white mx-2"><i class="fab fa-facebook"></i></a>
+                    <div class="social-links text-center text-md-end">
+                        <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" title="Instagram"><i class="fab fa-instagram"></i></a>
                     </div>
                 </div>
             </div>

@@ -3,8 +3,10 @@ import os
 from urllib.parse import quote_plus
 from concurrent.futures import ThreadPoolExecutor
 from django.conf import settings
-from .models import JobListing
+from .models import JobListing, CourseRecommendation
 import re
+import google.generativeai as genai
+import json
 
 class JobFetcher:
     @staticmethod
@@ -475,3 +477,151 @@ class MentorFinder:
                 unique_mentors.append(mentor)
         
         return unique_mentors 
+
+class CourseRecommender:
+    def __init__(self):
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        self.model = genai.GenerativeModel('gemini-1.5-pro')
+
+    def get_recommendations_for_missing_skills(self, missing_skills, current_skills=None, target_job=None):
+        """
+        Get course recommendations for missing skills using Gemini API.
+        
+        Args:
+            missing_skills (list): List of skills the user needs to learn
+            current_skills (list, optional): List of skills the user already has
+            target_job (str, optional): The job title the user is targeting
+        """
+        prompt = f"""
+        **Role:** You are an AI Career Advisor Assistant specializing in course recommendations.
+
+        **Context:** A user is looking to enhance their skills for career growth. They need recommendations for courses to learn specific skills.
+
+        **Current Information:**
+        - Missing Skills: {missing_skills}
+        - Current Skills: {current_skills if current_skills else 'Not specified'}
+        - Target Job: {target_job if target_job else 'Not specified'}
+
+        **Task:** Recommend the best online courses for each missing skill. Consider:
+        1. Course quality and reputation
+        2. Learning path progression
+        3. Practical, hands-on content
+        4. Current industry relevance
+        5. Prerequisites based on user's current skills
+
+        **Required Output Format:**
+        Provide a JSON object with this structure:
+        {{
+            "recommendations": {{
+                "skill_name": [
+                    {{
+                        "course_title": "Course name",
+                        "platform": "Platform name (Coursera/Udemy/edX/etc)",
+                        "url": "Course URL",
+                        "difficulty_level": "beginner/intermediate/advanced/all_levels",
+                        "description": "Brief course description",
+                        "estimated_duration": "X weeks",
+                        "prerequisites": ["skill1", "skill2"],
+                        "learning_outcomes": ["outcome1", "outcome2"],
+                        "career_impact": "How this course helps with career goals"
+                    }}
+                ]
+            }},
+            "learning_path": {{
+                "recommended_order": ["skill1", "skill2"],
+                "rationale": "Explanation of the recommended learning order"
+            }}
+        }}
+        """
+
+        try:
+            response = self.model.generate_content(prompt)
+            if not response or not response.text:
+                return {"error": "No response from Gemini API"}
+
+            # Extract JSON from response
+            text = response.text.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].strip()
+
+            recommendations = json.loads(text)
+
+            # Store recommendations in database
+            for skill, courses in recommendations.get('recommendations', {}).items():
+                for course_data in courses:
+                    CourseRecommendation.objects.get_or_create(
+                        skill=skill,
+                        course_title=course_data['course_title'],
+                        platform=course_data['platform'].lower(),
+                        url=course_data['url'],
+                        difficulty_level=course_data['difficulty_level'],
+                        description=course_data['description'],
+                        duration_weeks=int(course_data['estimated_duration'].split()[0])
+                    )
+
+            return recommendations
+
+        except Exception as e:
+            print(f"Error getting course recommendations: {str(e)}")
+            return {"error": str(e)}
+
+    def get_skill_prerequisites(self, skill):
+        """Get prerequisites for learning a specific skill."""
+        prompt = f"""
+        What are the prerequisite skills needed to learn {skill}?
+        Provide response as a JSON array of skill names, ordered from basic to advanced.
+        Example: ["basic_skill1", "intermediate_skill1", "advanced_skill1"]
+        """
+
+        try:
+            response = self.model.generate_content(prompt)
+            if not response or not response.text:
+                return []
+
+            # Extract JSON from response
+            text = response.text.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].strip()
+
+            prerequisites = json.loads(text)
+            return prerequisites
+
+        except Exception as e:
+            print(f"Error getting skill prerequisites: {str(e)}")
+            return []
+
+    def get_learning_path(self, target_skills, current_skills=None):
+        """Generate an optimal learning path for the target skills."""
+        prompt = f"""
+        Create an optimal learning path for these skills: {target_skills}
+        Current skills: {current_skills if current_skills else 'None'}
+        
+        Provide response as a JSON object with:
+        1. Ordered list of skills to learn
+        2. Estimated time for each skill
+        3. Dependencies between skills
+        4. Rationale for the order
+        """
+
+        try:
+            response = self.model.generate_content(prompt)
+            if not response or not response.text:
+                return {}
+
+            # Extract JSON from response
+            text = response.text.strip()
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].strip()
+
+            learning_path = json.loads(text)
+            return learning_path
+
+        except Exception as e:
+            print(f"Error generating learning path: {str(e)}")
+            return {} 
