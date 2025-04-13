@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: careerpath-ai
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn career_advisor.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: POSTGRES_DATABASE
+        fromDatabase:
+          name: careerpath-db
+          property: database
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: careerpath-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: careerpath-db
+          property: password
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: careerpath-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: careerpath-db
+          property: port
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JSEARCH_API_KEY
+        sync: false
+      - key: ADZUNA_APP_ID
+        sync: false
+      - key: ADZUNA_APP_KEY
+        sync: false
+
+databases:
+  - name: careerpath-db
+    databaseName: careerpath
+    plan: free 
