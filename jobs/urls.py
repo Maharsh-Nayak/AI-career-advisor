@@ -16,4 +16,5 @@ urlpatterns = [
     path('trending-courses/', views.trending_courses, name='trending_courses'),
     path('test/resume-analysis/', views.test_resume_analysis, name='test_resume_analysis'),
     path('test/skill-extraction/', views.test_skill_extraction, name='test_skill_extraction'),
+    path('skills-analysis/', views.skills_analysis, name='skills_analysis'),
 ] 

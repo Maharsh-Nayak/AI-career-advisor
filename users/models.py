@@ -22,6 +22,14 @@ class Profile(models.Model):
     def __str__(self):
         return f"{self.user.username}'s profile"
     
+    @classmethod
+    def create_profile(cls, user):
+        """
+        Get or create a profile for the given user
+        """
+        profile, created = cls.objects.get_or_create(user=user)
+        return profile
+    
     def get_skills_list(self):
         if not self.skills:
             return []

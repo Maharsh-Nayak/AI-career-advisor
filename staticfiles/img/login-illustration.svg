@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+    <style>
+        .st0{fill:#6c47ff}.st1{fill:#f3f4f6}.st2{fill:#e5e7eb}
+    </style>
+    <path class="st1" d="M50 100h400v300H50z"/>
+    <path class="st2" d="M80 130h340v240H80z"/>
+    <circle class="st0" cx="250" cy="200" r="50"/>
+    <path class="st0" d="M175 280h150v20H175zM200 320h100v20H200z"/>
+    <path class="st2" d="M150 400h200v20H150z"/>
+    <circle class="st0" cx="430" cy="70" r="10"/>
+    <circle class="st0" cx="70" cy="430" r="10"/>
+    <path class="st0" d="M380 450l20-20 20 20-20 20z"/>
+    <path class="st0" d="M80 50l20-20 20 20-20 20z"/>
+</svg> 

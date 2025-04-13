@@ -74,7 +74,7 @@ DATABASES = {
     }
 }
 
-# If DATABASE_URL is in environment, use that for production
+# Only use PostgreSQL if DATABASE_URL is set (like in production)
 if os.environ.get('DATABASE_URL'):
     DATABASES['default'] = dj_database_url.config(
         conn_max_age=600,

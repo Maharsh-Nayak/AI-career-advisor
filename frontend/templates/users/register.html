@@ -1,109 +1,327 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}CareerPath AI - Register{% endblock %}
+{% block title %}Career Compass - Sign Up{% endblock %}
+
+{% block extra_css %}
+<style>
+    html, body {
+        background: white;
+    }
+
+    .auth-container {
+        min-height: calc(100vh - 60px);
+        background: white;
+        padding: 2rem;
+        margin-top: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .auth-card {
+        background: white;
+        border-radius: 24px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        max-width: 1200px;
+        width: 100%;
+        margin: 0 auto;
+        transform: translateY(-20px);
+        animation: slideUp 0.6s ease-out forwards;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .auth-row {
+        display: flex;
+        min-height: auto;
+        height: auto;
+        max-height: 650px;
+        background: white;
+    }
+
+    .auth-image {
+        flex: 1.2;
+        background: white;
+        padding: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        max-height: 650px;
+        border: none;
+    }
+
+    .auth-image img {
+        width: 100%;
+        height: auto;
+        max-width: 400px;
+        object-fit: contain;
+        background: white;
+        display: block;
+        margin: 0 auto;
+        border: none;
+    }
+
+    .auth-image::before,
+    .auth-image::after {
+        display: none;
+    }
+
+    .auth-form {
+        flex: 0.8;
+        padding: 3rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        background: white;
+    }
+
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .brand-text {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #6c47ff;
+    }
+
+    .welcome-text {
+        font-size: 2rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #2d3748;
+    }
+
+    .subtitle {
+        color: #718096;
+        margin-bottom: 2rem;
+    }
+
+    .form-control {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1rem;
+        font-size: 1rem;
+    }
+
+    .form-control:focus {
+        border-color: #6c47ff;
+        box-shadow: 0 0 0 3px rgba(108, 71, 255, 0.1);
+    }
+
+    .signup-btn {
+        background: #6c47ff;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 0.75rem;
+        font-size: 1rem;
+        font-weight: 600;
+        margin-top: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .signup-btn:hover {
+        background: #5a3cd5;
+        transform: translateY(-1px);
+    }
+
+    .social-login {
+        margin-top: 2rem;
+        text-align: center;
+    }
+
+    .social-text {
+        color: #718096;
+        margin-bottom: 1rem;
+    }
+
+    .social-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+    }
+
+    .social-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .social-btn:hover {
+        border-color: #6c47ff;
+        transform: translateY(-2px);
+    }
+
+    .social-btn img {
+        width: 20px;
+        height: 20px;
+    }
+
+    .login-prompt {
+        text-align: center;
+        margin-top: 2rem;
+        color: #718096;
+    }
+
+    .login-link {
+        color: #6c47ff;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .form-row > div {
+        flex: 1;
+    }
+
+    .error-feedback {
+        color: #e53e3e;
+        font-size: 0.875rem;
+        margin-top: -0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .auth-container {
+            padding: 1rem;
+        }
+
+        .auth-row {
+            flex-direction: column;
+            height: auto;
+        }
+
+        .auth-image {
+            height: 300px;
+            min-height: 300px;
+        }
+
+        .auth-form {
+            padding: 2rem;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="content-section">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="page-card">
-                    <h1 class="text-center mb-4">Register</h1>
-                    
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert {{ message.tags }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                    
-                    <form method="post">
-                        {% csrf_token %}
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
-                            {{ form.username }}
-                            <div class="form-text">Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.</div>
-                            {% if form.username.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.username.errors }}
-                                </div>
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-row">
+            <div class="auth-image">
+                <img src="{% static 'img/signup-illustration.svg' %}" alt="Career Compass Illustration" class="img-fluid">
+            </div>
+            <div class="auth-form">
+                <div class="brand">
+                    <span class="brand-text">Career Compass</span>
+                </div>
+
+                <h1 class="welcome-text">Create Account</h1>
+                <p class="subtitle">Join us to start your career journey</p>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert {{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="form-row">
+                        <div>
+                            {{ form.first_name }}
+                            {% if form.first_name.errors %}
+                                <div class="error-feedback">{{ form.first_name.errors.0 }}</div>
                             {% endif %}
                         </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
-                            {{ form.email }}
-                            {% if form.email.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.email.errors }}
-                                </div>
+                        <div>
+                            {{ form.last_name }}
+                            {% if form.last_name.errors %}
+                                <div class="error-feedback">{{ form.last_name.errors.0 }}</div>
                             {% endif %}
                         </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
-                                    {{ form.first_name }}
-                                    {% if form.first_name.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {{ form.first_name.errors }}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
-                                    {{ form.last_name }}
-                                    {% if form.last_name.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {{ form.last_name.errors }}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.password1.id_for_label }}" class="form-label">Password</label>
-                            {{ form.password1 }}
-                            <div class="form-text">
-                                <ul>
-                                    <li>Your password can't be too similar to your other personal information.</li>
-                                    <li>Your password must contain at least 8 characters.</li>
-                                    <li>Your password can't be a commonly used password.</li>
-                                    <li>Your password can't be entirely numeric.</li>
-                                </ul>
-                            </div>
-                            {% if form.password1.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.password1.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.password2.id_for_label }}" class="form-label">Password Confirmation</label>
-                            {{ form.password2 }}
-                            <div class="form-text">Enter the same password as before, for verification.</div>
-                            {% if form.password2.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {{ form.password2.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary w-100">Register</button>
-                    </form>
-                    
-                    <div class="text-center mt-3">
-                        <p>Already have an account? <a href="{% url 'users:login' %}" class="text-decoration-none">Login here</a></p>
                     </div>
+
+                    <div class="mb-3">
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="error-feedback">{{ form.username.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="error-feedback">{{ form.email.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.password1 }}
+                        {% if form.password1.errors %}
+                            <div class="error-feedback">{{ form.password1.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                            <div class="error-feedback">{{ form.password2.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="signup-btn w-100">CREATE ACCOUNT</button>
+                </form>
+
+                <div class="social-login">
+                    <p class="social-text">Or sign up with</p>
+                    <div class="social-buttons">
+                        <a href="#" class="social-btn">
+                            <img src="{% static 'img/google-icon.svg' %}" alt="Google">
+                        </a>
+                        <a href="#" class="social-btn">
+                            <img src="{% static 'img/facebook-icon.svg' %}" alt="Facebook">
+                        </a>
+                        <a href="#" class="social-btn">
+                            <img src="{% static 'img/twitter-icon.svg' %}" alt="Twitter">
+                        </a>
+                    </div>
+                </div>
+
+                <div class="login-prompt">
+                    Already have an account? <a href="{% url 'users:login' %}" class="login-link">Login</a>
                 </div>
             </div>
         </div>

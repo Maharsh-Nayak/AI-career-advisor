@@ -145,8 +145,10 @@ def profile_update_view(request):
     View for updating user profile.
     Allows the user to update their profile information.
     """
-    # Get or create profile
-    profile = Profile.create_profile(request.user)
+    try:
+        profile = request.user.profile
+    except Profile.DoesNotExist:
+        profile = Profile.objects.create(user=request.user)
     
     if request.method == 'POST':
         user_form = UserUpdateForm(request.POST, instance=request.user)
