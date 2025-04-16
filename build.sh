@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# exit on error
+# Exit on error
 set -o errexit
 
-# Install dependencies
+# Install Python dependencies
 pip install -r requirements.txt
 
 # Collect static files
