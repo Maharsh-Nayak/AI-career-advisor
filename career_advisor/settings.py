@@ -66,20 +66,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'career_advisor.wsgi.application'
 
-# Database configuration
+# Database configuration - using SQLite for demo
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'sqlite-data', 'db.sqlite3'),
     }
 }
 
-# Only use PostgreSQL if DATABASE_URL is set (like in production)
-if os.environ.get('DATABASE_URL'):
-    DATABASES['default'] = dj_database_url.config(
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
+# Comment out PostgreSQL config for now
+# database_url = os.environ.get('DATABASE_URL')
+# if database_url and database_url.strip():
+#     DATABASES['default'] = dj_database_url.config(
+#         conn_max_age=600,
+#         conn_health_checks=True,
+#     )
+# else:
+#     print("WARNING: DATABASE_URL not set or empty. Using SQLite instead.")
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'

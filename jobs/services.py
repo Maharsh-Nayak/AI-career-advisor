@@ -7,6 +7,22 @@ from .models import JobListing, CourseRecommendation
 import re
 import google.generativeai as genai
 import json
+import random
+import logging
+from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Setup logging
+logger = logging.getLogger(__name__)
+
+# Configure Gemini API if key is available
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 
 class JobFetcher:
     @staticmethod
@@ -624,4 +640,99 @@ class CourseRecommender:
 
         except Exception as e:
             print(f"Error generating learning path: {str(e)}")
-            return {} 
+            return {}
+
+def get_job_recommendations_ai(skills, job_title=None, experience_level=None, location=None):
+    """
+    Use Gemini AI to generate job recommendations based on skills
+    
+    Args:
+        skills (list): List of user's skills
+        job_title (str, optional): User's current or desired job title
+        experience_level (str, optional): User's experience level (e.g., entry, mid, senior)
+        location (str, optional): User's preferred job location
+        
+    Returns:
+        list: List of recommended jobs with details
+    """
+    if not GEMINI_API_KEY:
+        logger.warning("Gemini API key not found. Using fallback job recommendations.")
+        return get_job_recommendations(skills, count=5)
+    
+    try:
+        # Format user skills for the prompt
+        skills_text = ", ".join(skills)
+        
+        # Build a context-rich prompt
+        prompt = f"""
+        Act as a career advisor and job recommendation system. Based on the following information, 
+        recommend 5 suitable job positions with detailed information:
+        
+        Skills: {skills_text}
+        {f"Current/Desired Job Title: {job_title}" if job_title else ""}
+        {f"Experience Level: {experience_level}" if experience_level else ""}
+        {f"Preferred Location: {location}" if location else ""}
+        
+        For each job recommendation, provide:
+        1. Job title
+        2. Company name (a relevant real company)
+        3. Job description (2-3 sentences)
+        4. Required skills (5-7 relevant skills)
+        5. Nice-to-have skills (2-3 additional skills that would be beneficial)
+        6. Estimated salary range
+        7. Job location (if a location preference was provided, include some jobs there)
+        8. Match percentage based on the provided skills (a number between 70-100)
+        
+        Return the results as a valid JSON array with the following structure for each job:
+        {{
+            "title": "Job Title",
+            "company": "Company Name",
+            "description": "Job description text",
+            "required_skills": ["Skill1", "Skill2", "Skill3", "Skill4", "Skill5"],
+            "nice_to_have_skills": ["Skill1", "Skill2", "Skill3"],
+            "salary_range": "Salary range text",
+            "location": "Job Location",
+            "match_percentage": 85
+        }}
+        
+        Respond ONLY with the JSON array, no additional text.
+        """
+        
+        # Initialize Gemini model
+        model = genai.GenerativeModel('gemini-pro')
+        
+        # Generate response
+        response = model.generate_content(prompt)
+        
+        # Extract the JSON string from the response
+        response_text = response.text
+        
+        # Clean up the response to ensure valid JSON
+        # Remove markdown code blocks if present
+        if response_text.startswith("```json"):
+            response_text = response_text.replace("```json", "").replace("```", "")
+        elif response_text.startswith("```"):
+            response_text = response_text.replace("```", "")
+            
+        # Parse the JSON
+        recommendations = json.loads(response_text)
+        
+        # Ensure we have the expected format and limit to 5 jobs
+        if isinstance(recommendations, list):
+            recommendations = recommendations[:5]
+            
+            # Add a URL field for each job
+            for job in recommendations:
+                job['url'] = f"https://www.google.com/search?q={job['title'].replace(' ', '+')}+{job['company'].replace(' ', '+')}"
+                job['source'] = "AI Generated"
+                job['posted_date'] = datetime.now().strftime("%Y-%m-%d")
+                
+            return recommendations
+        else:
+            logger.error("Unexpected format from Gemini API")
+            return get_job_recommendations(skills, count=5)
+            
+    except Exception as e:
+        logger.error(f"Error using Gemini API for job recommendations: {str(e)}")
+        # Fallback to the standard job recommendation function
+        return get_job_recommendations(skills, count=5) 

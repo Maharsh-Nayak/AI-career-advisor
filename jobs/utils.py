@@ -1,18 +1,51 @@
-import spacy
 import re
+import random
+import requests
+import json
+from urllib.parse import quote
+from django.conf import settings
 
-# Load spaCy model
+# Try to import spaCy and define global availability flag
+SPACY_AVAILABLE = False
+nlp = None
+
 try:
-    nlp = spacy.load("en_core_web_sm")
-except:
-    # Fallback if model not available
-    nlp = None
+    import spacy
+    SPACY_AVAILABLE = True
+    try:
+        nlp = spacy.load("en_core_web_sm")
+        print("INFO: Successfully loaded spaCy model.")
+    except Exception as e:
+        print(f"WARNING: Could not load spaCy model: {str(e)}. Some features may be limited.")
+except ImportError:
+    print("WARNING: spaCy is not available. Using fallback functions.")
+
+# Import fallback functions
+try:
+    from .utils_fallback import (
+        fallback_extract_keywords,
+        fallback_match_suggestions,
+        generate_linkedin_search_url,
+        generate_linkedin_profiles_with_gemini,
+        fallback_linkedin_profiles
+    )
+except ImportError:
+    print("WARNING: utils_fallback.py not found. Some features may not work.")
+    # Simple fallback definitions if the import fails
+    def fallback_extract_keywords(text):
+        """Simple fallback method for keyword extraction"""
+        words = text.lower().split()
+        return [w for w in words if len(w) > 3]
+        
+    def fallback_match_suggestions(user_skills, job_skills):
+        """Simple fallback for skill matching"""
+        return list(set(user_skills).intersection(set(job_skills)))
 
 def extract_keywords(goal_text):
     """Extract keywords from networking goal text using NLP"""
     
-    if nlp is None:
-        # Fallback method if spaCy not available
+    if not SPACY_AVAILABLE or nlp is None:
+        # Fallback method if spaCy not available or model not loaded
         return fallback_extract_keywords(goal_text)
     
     # Process the text with spaCy
@@ -95,313 +128,202 @@ def extract_keywords(goal_text):
     
     return list(set(clean_keywords))  # Remove duplicates
 
-def fallback_extract_keywords(goal_text):
-    """Fallback method for keyword extraction without NLP"""
-    # Convert to lowercase for consistency
-    text = goal_text.lower()
-    
-    # Define common networking-related terms to look for
-    roles = ["mentor", "data scientist", "engineer", "developer", "designer", 
-             "manager", "director", "analyst", "consultant", "specialist"]
-    
-    industries = ["tech", "technology", "gaming", "finance", "healthcare", 
-                 "renewable energy", "education", "retail", "media", "manufacturing"]
-    
-    objectives = ["learn", "connect", "explore", "find", "network", "discover", 
-                 "grow", "advance", "improve", "develop"]
-    
-    # Extract words from the text
-    words = re.findall(r'\b\w+\b', text)
-    
-    # Initialize keyword categories
-    extracted_keywords = []
-    
-    # Find roles
-    for role in roles:
-        if role in text:
-            extracted_keywords.append(role)
-    
-    # Find industries
-    for industry in industries:
-        if industry in text:
-            extracted_keywords.append(industry)
-    
-    # Find objectives
-    for objective in objectives:
-        if objective in text:
-            extracted_keywords.append(objective)
-    
-    # Look for 2-word phrases (e.g., "data science")
-    phrases = []
-    for i in range(len(words) - 1):
-        phrase = f"{words[i]} {words[i+1]}"
-        if any(role in phrase for role in roles) or any(industry in phrase for industry in industries):
-            phrases.append(phrase)
-    
-    return list(set(extracted_keywords + phrases))
-
-def match_suggestions(keywords):
-    """Map extracted keywords to industry, company, and role suggestions"""
-    industries = []
-    companies = []
-    roles = []
-    
-    # Add improved specificity to industry mapping
-    industry_keywords = {
-        'tech': 'Technology',
-        'technology': 'Technology',
-        'software': 'Technology',
-        'gaming': 'Gaming & Entertainment',
-        'game': 'Gaming & Entertainment',
-        'health': 'Healthcare & Biotechnology',
-        'healthcare': 'Healthcare & Biotechnology',
-        'medical': 'Healthcare & Biotechnology',
-        'finance': 'Finance & Banking',
-        'banking': 'Finance & Banking',
-        'financial': 'Finance & Banking',
-        'education': 'Education & E-learning',
-        'learning': 'Education & E-learning',
-        'teach': 'Education & E-learning',
-        'renewable': 'Renewable Energy',
-        'energy': 'Energy & Utilities',
-        'retail': 'Retail & E-commerce',
-        'ecommerce': 'Retail & E-commerce',
-        'advertising': 'Marketing & Advertising',
-        'marketing': 'Marketing & Advertising',
-        'media': 'Media & Communications',
-        'ai': 'Artificial Intelligence',
-        'artificial intelligence': 'Artificial Intelligence',
-        'machine learning': 'Artificial Intelligence',
-        'data': 'Data Science & Analytics',
-        'crypto': 'Blockchain & Cryptocurrency',
-        'blockchain': 'Blockchain & Cryptocurrency',
-        'legal': 'Legal & Compliance',
-        'law': 'Legal & Compliance',
-        'food': 'Food & Beverage',
-        'restaurant': 'Food & Beverage',
-        'hospitality': 'Travel & Hospitality',
-        'travel': 'Travel & Hospitality',
-        'automotive': 'Automotive & Transportation',
-        'transport': 'Automotive & Transportation',
-        'manufacturing': 'Manufacturing & Industrial',
-        'industrial': 'Manufacturing & Industrial'
-    }
-    
-    # Role mapping
-    role_keywords = {
-        # Development roles
-        'developer': 'Software Developer',
-        'engineer': 'Engineer',
-        'software engineer': 'Software Engineer',
-        'programmer': 'Programmer',
-        'coder': 'Programmer',
-        'architect': 'Solutions Architect',
-        'devops': 'DevOps Engineer',
-        'sre': 'Site Reliability Engineer',
-        'fullstack': 'Full Stack Developer',
-        'full stack': 'Full Stack Developer',
-        'frontend': 'Frontend Developer',
-        'front end': 'Frontend Developer',
-        'backend': 'Backend Developer',
-        'back end': 'Backend Developer',
-        'mobile': 'Mobile Developer',
-        'ios': 'iOS Developer',
-        'android': 'Android Developer',
-        'web': 'Web Developer',
-        
-        # Design roles
-        'designer': 'Designer',
-        'ui': 'UI Designer',
-        'ux': 'UX Designer',
-        'ui/ux': 'UI/UX Designer',
-        'user interface': 'UI Designer',
-        'user experience': 'UX Designer',
-        'graphic': 'Graphic Designer',
-        
-        # Data roles
-        'data': 'Data Professional',
-        'data scientist': 'Data Scientist',
-        'data science': 'Data Scientist',
-        'data engineer': 'Data Engineer',
-        'analyst': 'Data Analyst',
-        'business intelligence': 'BI Analyst',
-        'database': 'Database Administrator',
-        'dba': 'Database Administrator',
-        
-        # Security roles
-        'security': 'Security Engineer',
-        'cybersecurity': 'Cybersecurity Specialist',
-        'cyber security': 'Cybersecurity Specialist',
-        'network security': 'Network Security Engineer',
-        'information security': 'Information Security Analyst',
-        
-        # Management roles
-        'scientist': 'Scientist',
-        'researcher': 'Researcher',
-        'lead': 'Team Lead',
-        'manager': 'Manager',
-        'director': 'Director',
-        'head': 'Department Head',
-        'chief': 'Chief Officer',
-        'cto': 'Chief Technology Officer',
-        'cio': 'Chief Information Officer',
-        'ceo': 'Chief Executive Officer',
-        
-        # Other professional roles
-        'marketer': 'Marketing Specialist',
-        'consultant': 'Consultant',
-        'mentor': 'Mentor',
-        'coach': 'Career Coach',
-        'advisor': 'Advisor',
-        'recruiter': 'Recruiter',
-        'hr': 'HR Professional',
-        'project manager': 'Project Manager',
-        'product manager': 'Product Manager',
-        'scrum master': 'Scrum Master',
-        'qa': 'QA Engineer',
-        'quality assurance': 'QA Engineer',
-        'tester': 'QA Engineer',
-        'technical writer': 'Technical Writer',
-        'cloud engineer': 'Cloud Engineer',
-        'systems administrator': 'Systems Administrator',
-        'network administrator': 'Network Administrator'
-    }
-    
-    # Company mapping based on industry
-    company_by_industry = {
-        'Technology': ['Google', 'Microsoft', 'Apple', 'Amazon', 'Meta'],
-        'Gaming & Entertainment': ['Electronic Arts', 'Ubisoft', 'Epic Games', 'Activision Blizzard', 'Nintendo'],
-        'Healthcare & Biotechnology': ['Johnson & Johnson', 'Pfizer', 'Roche', 'Novartis', 'Medtronic'],
-        'Finance & Banking': ['JPMorgan Chase', 'Goldman Sachs', 'Morgan Stanley', 'Bank of America', 'Citigroup'],
-        'Education & E-learning': ['Coursera', 'Udemy', 'edX', 'Khan Academy', 'Chegg'],
-        'Renewable Energy': ['Tesla', 'NextEra Energy', 'First Solar', 'Siemens Gamesa', 'Vestas'],
-        'Retail & E-commerce': ['Walmart', 'Amazon', 'Shopify', 'Target', 'Alibaba'],
-        'Marketing & Advertising': ['WPP', 'Omnicom', 'Publicis', 'Interpublic', 'HubSpot'],
-        'Media & Communications': ['Disney', 'Warner Bros', 'Netflix', 'Comcast', 'Sony'],
-        'Artificial Intelligence': ['OpenAI', 'DeepMind', 'NVIDIA', 'IBM', 'SenseTime'],
-        'Data Science & Analytics': ['Databricks', 'Palantir', 'Snowflake', 'Tableau', 'SAS']
-    }
-    
-    # Map keywords to industries
-    for keyword in keywords:
-        for key, industry in industry_keywords.items():
-            if key in keyword.lower():
-                if industry not in industries:
-                    industries.append(industry)
-    
-    # Map keywords to roles
-    for keyword in keywords:
-        for key, role in role_keywords.items():
-            if key in keyword.lower():
-                if role not in roles:
-                    roles.append(role)
-    
-    # Generate company suggestions based on identified industries
-    for industry in industries:
-        if industry in company_by_industry:
-            # Add 3 companies from each matched industry
-            companies.extend(company_by_industry[industry][:3])
-    
-    # Default suggestions if nothing was matched
-    if not industries:
-        industries = ['Technology', 'Business Services']
-    if not roles:
-        roles = ['Business Professional', 'Networking Specialist']
-    if not companies:
-        companies = ['LinkedIn', 'Indeed', 'Glassdoor']
-    
-    # Format the output with reasons
-    formatted_industries = [{"name": industry, "reason": f"Based on your networking goals"} for industry in industries[:5]]
-    formatted_roles = [{"title": role, "reason": f"Relevant to your career interests"} for role in roles[:5]]
-    formatted_companies = [{"name": company, "reason": f"Leading organization in {industries[0] if industries else 'your field'}"} for company in companies[:5]]
-    
-    return {
-        "relevant_industries": formatted_industries,
-        "example_companies": formatted_companies,
-        "relevant_role_types": formatted_roles
-    }
-
-def generate_linkedin_search_url(role, industry):
-    """Generate a LinkedIn search URL for finding mentors"""
-    # Clean and encode the role and industry for search
-    role_query = role.replace(" ", "%20")
-    industry_query = industry.replace(" ", "%20")
-    
-    # Create a more targeted LinkedIn search that specifically looks for mentors in the role/industry
-    return f"https://www.linkedin.com/search/results/people/?keywords={role_query}%20{industry_query}%20mentor&origin=GLOBAL_SEARCH_HEADER&sid=)LB"
-
-def generate_linkedin_profiles_with_gemini(networking_goal, extracted_keywords):
-    """Use Gemini API to generate optimized LinkedIn search queries and profile recommendations"""
-    from google.generativeai import GenerativeModel
-    from django.conf import settings
-    import json
+def match_suggestions(user_skills, job_skills):
+    """Match user skills with job skills"""
+    if not SPACY_AVAILABLE or nlp is None:
+        # Use fallback when spaCy is not available or model not loaded
+        return fallback_match_suggestions(user_skills, job_skills)
     
     try:
-        model = GenerativeModel('gemini-1.5-pro')
+        # Process with spaCy for better matching
+        common_skills = set(user_skills).intersection(set(job_skills))
         
-        prompt = f"""
-        As a career networking expert, analyze the user's networking goal and extracted keywords below to create optimized LinkedIn profile search recommendations.
+        # Also look for similar skills (that might be phrased differently)
+        similar_skills = []
+        for user_skill in user_skills:
+            user_doc = nlp(user_skill.lower())
+            for job_skill in job_skills:
+                if job_skill.lower() in common_skills:
+                    continue  # Skip already matched skills
+                
+                job_doc = nlp(job_skill.lower())
+                similarity = user_doc.similarity(job_doc)
+                
+                # High similarity threshold to avoid false positives
+                if similarity > 0.8:
+                    similar_skills.append((user_skill, job_skill, similarity))
         
-        User's Networking Goal: "{networking_goal}"
+        # Add the highest similarity matches that aren't already exact matches
+        similar_skills.sort(key=lambda x: x[2], reverse=True)
         
-        Extracted Keywords: {json.dumps(extracted_keywords)}
+        # Add top similar skills (up to 5)
+        top_similar = [pair[0] for pair in similar_skills[:5]]
         
-        Based on this information, create EXACTLY 4 highly-specific LinkedIn profile searches that would help the user connect with the most relevant professionals. For each search:
-        
-        1. Create a precise LinkedIn search query string (what would go in the search box)
-        2. Specify the exact role/position title to search for
-        3. Specify the industry/sector to focus on
-        4. Add any additional search parameters that would improve results (like years of experience, specific skills, etc.)
-        5. Briefly explain why this particular search would be valuable for the user
-        
-        Format your response as a JSON array of objects with these fields:
-        - search_query: The full search string to use (3-6 keywords max)
-        - role: The specific role/title
-        - industry: The specific industry
-        - additional_params: Any other search parameters
-        - description: Brief explanation of why this search is relevant
-        - url: The complete LinkedIn search URL for this query
-        
-        Make your searches highly targeted and specific to the user's goal. Focus on finding potential mentors, industry experts, and professionals who could provide meaningful connections.
-        """
-        
-        # Get the response from Gemini
-        response = model.generate_content(prompt)
-        
-        # Extract the JSON from the response
-        raw_text = response.text.strip()
-        if "```json" in raw_text:
-            raw_text = raw_text.split("```json")[1].split("```")[0].strip()
-        elif "```" in raw_text:
-            raw_text = raw_text.split("```")[1].strip()
-        
-        # Parse the JSON response
-        linkedin_profiles = json.loads(raw_text)
-        
-        # Format the URLs correctly
-        for profile in linkedin_profiles:
-            # Ensure search query is properly URL encoded
-            search_query = profile["search_query"].replace(" ", "%20")
-            
-            # Create the proper LinkedIn search URL with the optimized query
-            profile["url"] = f"https://www.linkedin.com/search/results/people/?keywords={search_query}&origin=GLOBAL_SEARCH_HEADER"
-            
-            # Add primary flag for the first two results
-            profile["primary"] = linkedin_profiles.index(profile) < 2
-        
-        return linkedin_profiles
-        
+        return list(common_skills) + top_similar
     except Exception as e:
-        print(f"Error using Gemini API for LinkedIn profiles: {e}")
-        # Return a simple fallback structure
-        return [
-            {
-                "search_query": "experienced mentor",
-                "role": "Career Mentor",
-                "industry": "Career Development",
-                "additional_params": "5+ years experience",
-                "description": "General career mentors can help with networking strategy",
-                "url": "https://www.linkedin.com/search/results/people/?keywords=experienced%20mentor&origin=GLOBAL_SEARCH_HEADER",
-                "primary": True
-            }
-        ] 
+        print(f"Error using spaCy for skill matching: {str(e)}")
+        return fallback_match_suggestions(user_skills, job_skills)
+
+def generate_linkedin_search_url(job_title, location=None):
+    """Generate a LinkedIn search URL for networking"""
+    base_url = "https://www.linkedin.com/search/results/people/"
+    params = []
+    
+    if job_title:
+        # Replace spaces with %20 for URL encoding
+        job_title = job_title.replace(' ', '%20')
+        params.append(f"keywords={job_title}")
+    
+    if location:
+        # Replace spaces with %20 for URL encoding
+        location = location.replace(' ', '%20')
+        params.append(f"location={location}")
+    
+    # Join params with &
+    query_string = "&".join(params)
+    
+    # Return the final URL
+    return f"{base_url}?{query_string}"
+
+def generate_linkedin_profiles_with_gemini(job_title, industry=None, count=3):
+    """Generate simulated LinkedIn profiles using Gemini API or fallback to mock data"""
+    try:
+        # Try using Gemini API
+        if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != 'AIzaSyCphmUSSXd-TpUbu2q2pBJTV9bsV1wmM4Q':
+            import google.generativeai as genai
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            model = genai.GenerativeModel('gemini-1.5-pro')
+            
+            prompt = f"""
+            Generate {count} simulated LinkedIn profiles for professionals in the {job_title} role
+            {f'in the {industry} industry' if industry else ''}.
+            
+            For each profile, include:
+            1. Full name
+            2. Current position and company
+            3. Location
+            4. A brief summary of their experience
+            5. Top 3-5 skills
+            6. Education background
+            
+            Format the response as a JSON array with objects that have the following fields:
+            - name
+            - title
+            - company
+            - location
+            - summary
+            - skills (as an array)
+            - education
+            - linkedin_url (this should be a simulated URL)
+            """
+            
+            response = model.generate_content(prompt)
+            text = response.text
+            
+            # Extract JSON from response
+            if "```json" in text:
+                json_text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                json_text = text.split("```")[1].strip()
+            else:
+                json_text = text.strip()
+                
+            try:
+                profiles = json.loads(json_text)
+                return profiles
+            except:
+                # If JSON parsing fails, fall back to mock data
+                return fallback_linkedin_profiles(job_title, industry, count)
+        else:
+            # No valid API key, use mock data
+            return fallback_linkedin_profiles(job_title, industry, count)
+    except Exception as e:
+        print(f"Error generating LinkedIn profiles with Gemini: {str(e)}")
+        return fallback_linkedin_profiles(job_title, industry, count)
+
+def fallback_linkedin_profiles(job_title, industry=None, count=3):
+    """Generate mock LinkedIn profiles when Gemini API is unavailable"""
+    companies = [
+        "Google", "Microsoft", "Amazon", "Apple", "Meta", "IBM", "Oracle", 
+        "Intel", "Cisco", "Adobe", "Salesforce", "Twitter", "LinkedIn", 
+        "Netflix", "Spotify", "Airbnb", "Uber", "Tesla"
+    ]
+    
+    locations = [
+        "San Francisco, CA", "New York, NY", "Seattle, WA", "Austin, TX", 
+        "Boston, MA", "Chicago, IL", "Los Angeles, CA", "Denver, CO", 
+        "Atlanta, GA", "Toronto, Canada", "London, UK", "Berlin, Germany"
+    ]
+    
+    schools = [
+        "Stanford University", "MIT", "Harvard University", "UC Berkeley",
+        "Carnegie Mellon University", "Georgia Tech", "University of Washington",
+        "University of Michigan", "Cornell University", "Columbia University"
+    ]
+    
+    degrees = ["BS", "BA", "MS", "MBA", "PhD"]
+    
+    fields = ["Computer Science", "Information Technology", "Business Administration", 
+              "Data Science", "Engineering", "Mathematics", "Economics"]
+    
+    first_names = ["James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", 
+                  "Linda", "William", "Elizabeth", "David", "Susan", "Richard", "Jessica", 
+                  "Joseph", "Sarah", "Thomas", "Karen", "Charles", "Nancy"]
+    
+    last_names = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", 
+                 "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", 
+                 "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin"]
+    
+    job_skills = {
+        "Software Engineer": ["Python", "JavaScript", "Java", "React", "Node.js", "AWS", "Git", "SQL", "Docker"],
+        "Data Scientist": ["Python", "R", "SQL", "Machine Learning", "TensorFlow", "PyTorch", "Data Visualization", "Statistics"],
+        "Product Manager": ["Product Strategy", "Agile", "User Research", "Roadmapping", "Market Analysis", "A/B Testing"],
+        "UX Designer": ["Figma", "User Research", "Wireframing", "Prototyping", "Usability Testing", "UI Design"],
+        "Marketing Manager": ["Digital Marketing", "SEO", "Content Strategy", "Social Media", "Brand Management", "Analytics"],
+        "Financial Analyst": ["Financial Modeling", "Excel", "Forecasting", "Budgeting", "Accounting", "Data Analysis"],
+        "HR Manager": ["Recruitment", "Employee Relations", "Performance Management", "Compensation", "HR Policies"],
+        "Project Manager": ["Agile", "Scrum", "Project Planning", "Risk Management", "Stakeholder Management", "JIRA"]
+    }
+    
+    # Get skills for the specified job title, or use generic skills
+    if job_title in job_skills:
+        skills_pool = job_skills[job_title]
+    else:
+        # Generic skills that could apply to many roles
+        skills_pool = ["Communication", "Leadership", "Problem Solving", "Teamwork", 
+                      "Project Management", "Strategic Thinking", "Time Management", 
+                      "Critical Thinking", "Creativity", "Decision Making"]
+    
+    profiles = []
+    for i in range(count):
+        first_name = random.choice(first_names)
+        last_name = random.choice(last_names)
+        company = random.choice(companies)
+        
+        # Select 3-5 random skills for this profile
+        num_skills = random.randint(3, 5)
+        profile_skills = random.sample(skills_pool, min(num_skills, len(skills_pool)))
+        
+        school = random.choice(schools)
+        degree = random.choice(degrees)
+        field = random.choice(fields)
+        grad_year = random.randint(2010, 2023)
+        
+        location = random.choice(locations)
+        
+        # Create a realistic-looking profile
+        profile = {
+            "name": f"{first_name} {last_name}",
+            "title": job_title,
+            "company": company,
+            "location": location,
+            "summary": f"Experienced {job_title} with a passion for {profile_skills[0]} and {profile_skills[1]}. " +
+                      f"{random.randint(3, 15)} years of experience in the {industry if industry else 'technology'} industry.",
+            "skills": profile_skills,
+            "education": f"{degree} in {field}, {school}, {grad_year}",
+            "linkedin_url": f"https://www.linkedin.com/in/{first_name.lower()}-{last_name.lower()}-{random.randint(100, 999)}"
+        }
+        
+        profiles.append(profile)
+    
+    return profiles 
